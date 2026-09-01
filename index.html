@@ -230,7 +230,11 @@ select.pill{padding:5px 10px;outline:none}
 @media(max-width:760px){.kanban{grid-template-columns:1fr}}
 .col{padding:12px;min-height:110px}
 .col h3{font-size:11.5px;letter-spacing:.9px;text-transform:uppercase;color:var(--muted);margin:2px 4px 10px;font-weight:700}
-.kcard{background:var(--panel2);border:1px solid var(--line);border-radius:var(--r-sm);padding:10px 11px;margin-bottom:8px}
+.kcard{background:var(--panel2);border:1px solid var(--line);border-radius:var(--r-sm);padding:10px 11px;margin-bottom:8px;cursor:grab;transition:.13s}
+.kcard:active{cursor:grabbing}
+.kcard.arrastrando{opacity:.4;border-style:dashed}
+.col{transition:.13s}
+.col.destino{border-color:var(--accent);background:var(--accent-soft)}
 .kcard .kt{font-weight:500;font-size:13.5px;word-break:break-word}
 .kcard.done .kt{text-decoration:line-through;color:var(--muted)}
 .kcard .krow{display:flex;align-items:center;gap:6px;margin-top:8px;flex-wrap:wrap}
@@ -392,6 +396,13 @@ select.pill{padding:5px 10px;outline:none}
 .bruce-ask{display:flex;gap:8px;padding:12px 16px;border-top:1px solid var(--line)}
 .bruce-ask input{flex:1;min-width:0;padding:9px 13px;border:1px solid var(--line);border-radius:999px;background:var(--panel2);outline:none;font-size:13px}
 .bruce-ask input:focus{border-color:var(--accent)}
+.mic{width:38px;height:38px;border-radius:50%;border:1px solid var(--line);background:var(--panel2);display:grid;place-items:center;flex:none;color:var(--accent-ink);transition:.14s}
+.mic:hover{border-color:var(--accent)}
+.mic .svgic{width:18px;height:18px}
+.mic.escuchando{background:var(--accent);border-color:var(--accent);color:var(--on-accent);animation:pulso 1.2s ease-in-out infinite}
+@keyframes pulso{0%,100%{box-shadow:0 0 0 0 rgba(200,240,74,.5)}50%{box-shadow:0 0 0 9px rgba(200,240,74,0)}}
+.capture .mic{width:34px;height:34px}
+@media(prefers-reduced-motion:reduce){.mic.escuchando{animation:none}}
 @media(max-width:860px){
   .bruce-btn{right:auto;left:16px;bottom:calc(78px + env(safe-area-inset-bottom));width:54px;height:54px}
   .bruce-btn svg{width:38px;height:38px}
@@ -466,7 +477,8 @@ select.pill{padding:5px 10px;outline:none}
     <button class="pill" data-act="bruce-ask" data-q="semana">Semana</button>
   </div>
   <form class="bruce-ask" data-act="bruce-form">
-    <input id="bruceInput" placeholder="Pídeme algo: hoy, hábitos, nueva tarea..." autocomplete="off" aria-label="Hablar con Bruce">
+    <button type="button" class="mic" data-act="mic" data-destino="bruce" aria-label="Dictar por voz" title="Dictar por voz"></button>
+    <input id="bruceInput" placeholder="Escribe o dicta: nueva tarea, hoy, hábitos..." autocomplete="off" aria-label="Hablar con Bruce">
     <button class="btn primary sm" type="submit" aria-label="Enviar">→</button>
   </form>
 </div>
@@ -522,6 +534,7 @@ function seed(){
     projects: [],
     notes: [],
     habits: [],
+    deleted: [],
     settings: { theme:'dark', name:'Marco', sound:true, bruce:true, habitHour:20, nudgeEvery:120, lastHabitNudge:'' }
   };
 }
@@ -535,6 +548,7 @@ function load(){
         projects: Array.isArray(d.projects) ? d.projects : [],
         notes:    Array.isArray(d.notes)    ? d.notes    : [],
         habits:   Array.isArray(d.habits)   ? d.habits   : [],
+        deleted:  Array.isArray(d.deleted)  ? d.deleted  : [],
         settings: Object.assign({ theme:'dark', name:'Marco', sound:true, bruce:true, habitHour:20, nudgeEvery:120, lastHabitNudge:'' }, d.settings || {})
       };
     }
@@ -545,6 +559,14 @@ function load(){
 }
 let S = load();
 function save(){ try{ localStorage.setItem(LS_KEY, JSON.stringify(S)); }catch(e){ toast('No se pudo guardar 😕'); } }
+
+/* marca de tiempo por elemento: permite combinar copias entre dispositivos */
+function touch(o){ if(o) o.mtime = Date.now(); return o; }
+function tumba(id, tipo){
+  S.deleted = (S.deleted || []).filter(t => t.id !== id);
+  S.deleted.push({ id, tipo, mtime: Date.now() });
+}
+function destumba(id){ S.deleted = (S.deleted || []).filter(t => t.id !== id); }
 
 /* estado de interfaz (no persistente salvo tema) */
 const ui = { view:'hoy', project:null, filter:'todas', proj:'', q:'', day:null, calMonth:null };
@@ -628,7 +650,8 @@ const ICONS = {
   left:'<path d="M15 5l-7 7 7 7"/>',
   right:'<path d="M9 5l7 7-7 7"/>',
   x:'<path d="M6 6l12 12M18 6 6 18"/>',
-  save:'<path d="M5 4h11l3 3v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z"/><path d="M8 4v5h7M8 15h8"/>'
+  save:'<path d="M5 4h11l3 3v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z"/><path d="M8 4v5h7M8 15h8"/>',
+  mic:'<rect x="9" y="2.5" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18.5V22M9 22h6"/>'
 };
 function icon(name, size){
   const s = size ? ` style="width:${size}px;height:${size}px"` : '';
@@ -795,8 +818,9 @@ function renderHoy(){
   <form class="capture" data-act="capture-form">
     <span class="plus">${icon('plus', 20)}</span>
     <input id="captureInput" placeholder="¿Qué necesitas hacer?" autocomplete="off" aria-label="Captura rápida de tarea">
+    ${VozOK ? `<button type="button" class="mic" data-act="mic" data-destino="captura" aria-label="Dictar tarea por voz" title="Dictar tarea">${icon('mic')}</button>` : ''}
   </form>
-  <p class="hint">Escríbelo natural: <b>mañana</b> · <b>viernes</b> · <b>9:30</b> · <b>!alta</b>${S.projects.length ? ` · <b>#${esc(S.projects[0].name.replace(/\s/g,''))}</b>` : ''}</p>
+  <p class="hint">${VozOK ? 'Dicta con el micrófono o escríbelo natural' : 'Escríbelo natural'}: <b>mañana</b> · <b>viernes</b> · <b>9:30</b> · <b>!alta</b>${S.projects.length ? ` · <b>#${esc(S.projects[0].name.replace(/\s/g,''))}</b>` : ''}</p>
 
   ${added ? `<div class="card justadded">
       <span>${icon('check')} Creada: <b>${esc(added.title)}</b></span>
@@ -912,11 +936,12 @@ function renderProyectoDetalle(id){
   <p class="stats-line"><b>${s.pend}</b> pendientes · <b>${s.done}</b> completadas · ${s.pct}%</p>
   <div class="bar" style="max-width:340px"><span style="width:${s.pct}%"></span></div>
 
+  <p class="hint" style="margin-top:14px">Arrastra las tarjetas entre columnas, o usa los botones de cada una.</p>
   <div class="kanban">
     ${cols.map(c => {
       const items = ts.filter(t => (t.status === c[0]) || (c[0]==='pendiente' && t.status !== 'proceso' && t.status !== 'completada'));
-      return `<div class="card col"><h3>${c[1]} · ${items.length}</h3>
-        ${items.map(t => `<div class="kcard ${isDone(t)?'done':''}">
+      return `<div class="card col" data-col="${c[0]}"><h3>${c[1]} · ${items.length}</h3>
+        ${items.map(t => `<div class="kcard ${isDone(t)?'done':''}" draggable="true" data-drag="${t.id}">
           <div class="kt">${t.priority==='alta' && !isDone(t) ? '<span class="bang">!</span>':''}${esc(t.title)}</div>
           <div class="krow">
             <span class="chip">📅 ${esc(shortDate(t.date))}</span>
@@ -1144,12 +1169,15 @@ function renderPerfil(){
 
   <div class="section-title">Datos</div>
   <div class="card" style="padding:0;overflow:hidden">
+    <button class="rowitem" data-act="share">${icon('upload')} <span>Compartir copia (pasar al otro equipo)</span><span class="chev">›</span></button>
     <button class="rowitem" data-act="export">${icon('download')} <span>Exportar copia (.json)</span><span class="chev">›</span></button>
-    <button class="rowitem" data-act="import">${icon('upload')} <span>Importar copia</span><span class="chev">›</span></button>
+    <button class="rowitem" data-act="import">${icon('save')} <span>Importar copia (combina o reemplaza)</span><span class="chev">›</span></button>
     <button class="rowitem" data-act="reset" style="color:var(--hi)">${icon('trash')} <span>Borrar todos los datos</span><span class="chev">›</span></button>
   </div>
   <input type="file" id="importFile" accept="application/json,.json" style="display:none" aria-hidden="true">
-  <p class="hint" style="margin-top:14px">Exporta de vez en cuando: si limpias el navegador, los datos se pierden.</p>`;
+  <p class="hint" style="margin-top:14px">${S.settings.lastExport
+      ? `Última copia: <b>${esc(shortDate(S.settings.lastExport))}</b>. Los datos viven solo en este dispositivo.`
+      : 'Aún no has hecho ninguna copia. Los datos viven solo en este dispositivo.'}</p>`;
 }
 
 /* distribución por proyecto (donut sin librerías) */
@@ -1234,7 +1262,7 @@ function taskModal(id, preset){
   const d = t || Object.assign({ title:'', date:today(), time:'', projectId:ui.project||'', priority:'media', status:'pendiente', note:'', remind:0 }, preset || {});
   modalSubs = (d.subtasks || []).map(s => ({ text:s.text, done:!!s.done }));
   openModal(modalShell(id ? 'Editar tarea' : 'Nueva tarea', `
-    <div class="field"><label>Nombre</label><input name="title" required value="${esc(d.title)}" placeholder="Ej: Enviar reporte Red Bull"></div>
+    <div class="field"><label>Nombre</label><input name="title" required value="${esc(d.title)}" placeholder="Ej: Enviar reporte semanal"></div>
     <div class="row2">
       <div class="field"><label>Fecha</label><input type="date" name="date" value="${esc(d.date||today())}"></div>
       <div class="field"><label>Hora (opcional)</label><input type="time" name="time" value="${esc(d.time||'')}"></div>
@@ -1268,11 +1296,12 @@ function taskModal(id, preset){
       if(before && data.date && before !== data.date && data.status !== 'completada') t.migrated = true;
       if(data.status === 'completada' && !t.completedAt) t.completedAt = today();
       if(data.status !== 'completada') t.completedAt = '';
+      touch(t);
     }else{
-      S.tasks.push(Object.assign({
+      S.tasks.push(touch(Object.assign({
         id:uid(), migrated:false, completedAt: data.status==='completada' ? today() : '',
         createdAt:new Date().toISOString()
-      }, data));
+      }, data)));
     }
     save(); closeModal(); render(); toast(t ? 'Tarea actualizada' : 'Tarea creada');
   });
@@ -1291,25 +1320,25 @@ function dateModal(id){
 function setTaskDate(id, nd){
   const t = taskById(id); if(!t || !nd) return;
   if(t.date && t.date !== nd && t.status !== 'completada') t.migrated = true;
-  t.date = nd; save(); render(); toast('Fecha: ' + shortDate(nd));
+  t.date = nd; touch(t); save(); render(); toast('Fecha: ' + shortDate(nd));
 }
 function projPickModal(id){
   const t = taskById(id); if(!t) return;
   openModal(modalShell('Cambiar proyecto', `
     <div class="field"><label>${esc(t.title)}</label><select name="projectId">${projOptions(t.projectId)}</select></div>`),
-  (data) => { t.projectId = data.projectId; save(); closeModal(); render(); toast('Proyecto actualizado'); });
+  (data) => { t.projectId = data.projectId; touch(t); save(); closeModal(); render(); toast('Proyecto actualizado'); });
 }
 function projectModal(id){
   const p = id ? projById(id) : null;
   const d = p || { name:'', color: COLORS[S.projects.length % COLORS.length] };
   openModal(modalShell(id ? 'Editar proyecto' : 'Nuevo proyecto', `
-    <div class="field"><label>Nombre</label><input name="name" required value="${esc(d.name)}" placeholder="Ej: Red Bull"></div>
+    <div class="field"><label>Nombre</label><input name="name" required value="${esc(d.name)}" placeholder="Ej: Trabajo"></div>
     <div class="field"><label>Color</label><select name="color">
       ${COLORS.map(c => `<option value="${c}" ${d.color===c?'selected':''}>${c}</option>`).join('')}
     </select></div>`),
   (data) => {
     if(!data.name.trim()) return;
-    if(p) Object.assign(p, data); else S.projects.push({ id:uid(), name:data.name, color:data.color });
+    if(p) touch(Object.assign(p, data)); else S.projects.push(touch({ id:uid(), name:data.name, color:data.color }));
     save(); closeModal(); render(); toast(p ? 'Proyecto actualizado' : 'Proyecto creado');
   });
 }
@@ -1322,8 +1351,8 @@ function noteModal(id){
     id ? `<button type="button" class="btn left" data-act="note2task" data-id="${id}">→ Convertir en tarea</button>` : ''),
   (data) => {
     if(!data.title.trim() && !data.content.trim()) return;
-    if(n) Object.assign(n, data);
-    else S.notes.push({ id:uid(), title:data.title, content:data.content, createdAt:new Date().toISOString() });
+    if(n) touch(Object.assign(n, data));
+    else S.notes.push(touch({ id:uid(), title:data.title, content:data.content, createdAt:new Date().toISOString() }));
     save(); closeModal(); render(); toast(n ? 'Nota actualizada' : 'Nota creada');
   });
 }
@@ -1337,8 +1366,8 @@ function habitModal(id){
     </div>`),
   (data) => {
     if(!data.name.trim()) return;
-    if(h) Object.assign(h, { icon:data.icon || '🔄', name:data.name });
-    else S.habits.push({ id:uid(), icon:data.icon || '🔄', name:data.name, log:{} });
+    if(h) touch(Object.assign(h, { icon:data.icon || '🔄', name:data.name }));
+    else S.habits.push(touch({ id:uid(), icon:data.icon || '🔄', name:data.name, log:{} }));
     save(); closeModal(); render(); toast(h ? 'Hábito actualizado' : 'Hábito creado');
   });
 }
@@ -1413,7 +1442,7 @@ function quickAdd(raw){
     priority:p.priority, status:'pendiente', note:'', migrated:false, completedAt:'',
     createdAt:new Date().toISOString()
   };
-  S.tasks.push(t); lastAdded = t.id;
+  touch(t); S.tasks.push(t); lastAdded = t.id;
   save(); render();
   toast('Tarea creada · ' + shortDate(t.date) + (t.time ? ' ' + t.time : ''));
   const inp = $('#captureInput'); if(inp) inp.focus();
@@ -1422,14 +1451,14 @@ function cyclePrio(id){
   const t = taskById(id); if(!t) return;
   const o = ['baja','media','alta'];
   t.priority = o[(o.indexOf(t.priority) + 1) % 3];
-  save(); render(); toast('Prioridad: ' + PRIOS[t.priority].label);
+  touch(t); save(); render(); toast('Prioridad: ' + PRIOS[t.priority].label);
 }
 function bulkToHoy(){
   const d0 = today();
   const move = S.tasks.filter(t => !isDone(t) && t.date && t.date < d0);
   if(!move.length) return;
   const prev = move.map(t => ({ id:t.id, date:t.date, mig:t.migrated }));
-  move.forEach(t => { t.date = d0; t.migrated = true; });
+  move.forEach(t => { t.date = d0; t.migrated = true; touch(t); });
   save(); render();
   toast(move.length + ' tareas movidas a hoy', 'Deshacer', () => {
     prev.forEach(o => { const t = taskById(o.id); if(t){ t.date = o.date; t.migrated = o.mig; } });
@@ -1440,51 +1469,51 @@ function toggleTask(id){
   const t = taskById(id); if(!t) return;
   if(t.status === 'completada'){ t.status = 'pendiente'; t.completedAt = ''; }
   else { t.status = 'completada'; t.completedAt = today(); t.migrated = false; }
-  save(); render();
+  touch(t); save(); render();
 }
 function setStatus(id, st){
   const t = taskById(id); if(!t) return;
   t.status = st;
   t.completedAt = st === 'completada' ? today() : '';
-  save(); render();
+  touch(t); save(); render();
 }
 /* Borrado sin diálogos: se ejecuta y se ofrece Deshacer 6s */
 function delTask(id){
   const i = S.tasks.findIndex(x => x.id === id); if(i < 0) return;
   const t = S.tasks[i];
-  S.tasks.splice(i, 1);
+  S.tasks.splice(i, 1); tumba(id, 'task');
   if(lastAdded === id) lastAdded = null;
   save(); closeModal(); render();
-  toast('Tarea eliminada', 'Deshacer', () => { S.tasks.splice(i, 0, t); save(); render(); });
+  toast('Tarea eliminada', 'Deshacer', () => { S.tasks.splice(i, 0, touch(t)); destumba(id); save(); render(); });
 }
 function delProject(id){
   const i = S.projects.findIndex(x => x.id === id); if(i < 0) return;
   const p = S.projects[i];
   const afectadas = S.tasks.filter(t => t.projectId === id).map(t => t.id);
-  S.projects.splice(i, 1);
-  S.tasks.forEach(t => { if(t.projectId === id) t.projectId = ''; });
+  S.projects.splice(i, 1); tumba(id, 'project');
+  S.tasks.forEach(t => { if(t.projectId === id){ t.projectId = ''; touch(t); } });
   if(ui.project === id) ui.project = null;
   if(ui.proj === id) ui.proj = '';
   save(); closeModal(); render();
   toast('Proyecto eliminado' + (afectadas.length ? ' · ' + afectadas.length + ' tareas sin proyecto' : ''), 'Deshacer', () => {
-    S.projects.splice(i, 0, p);
-    S.tasks.forEach(t => { if(afectadas.indexOf(t.id) > -1) t.projectId = id; });
+    S.projects.splice(i, 0, touch(p)); destumba(id);
+    S.tasks.forEach(t => { if(afectadas.indexOf(t.id) > -1){ t.projectId = id; touch(t); } });
     save(); render();
   });
 }
 function delNote(id){
   const i = S.notes.findIndex(x => x.id === id); if(i < 0) return;
   const n = S.notes[i];
-  S.notes.splice(i, 1);
+  S.notes.splice(i, 1); tumba(id, 'note');
   save(); closeModal(); render();
-  toast('Nota eliminada', 'Deshacer', () => { S.notes.splice(i, 0, n); save(); render(); });
+  toast('Nota eliminada', 'Deshacer', () => { S.notes.splice(i, 0, touch(n)); destumba(id); save(); render(); });
 }
 function delHabit(id){
   const i = S.habits.findIndex(x => x.id === id); if(i < 0) return;
   const h = S.habits[i];
-  S.habits.splice(i, 1);
+  S.habits.splice(i, 1); tumba(id, 'habit');
   save(); closeModal(); render();
-  toast('Hábito eliminado', 'Deshacer', () => { S.habits.splice(i, 0, h); save(); render(); });
+  toast('Hábito eliminado', 'Deshacer', () => { S.habits.splice(i, 0, touch(h)); destumba(id); save(); render(); });
 }
 function noteToTask(id){
   const n = noteById(id); if(!n) return;
@@ -1495,7 +1524,7 @@ function toggleHabitDay(id, k){
   const h = habitById(id); if(!h) return;
   h.log = h.log || {};
   if(h.log[k]) delete h.log[k]; else h.log[k] = true;
-  save(); render();
+  touch(h); save(); render();
 }
 /* ---- datos: exportar / importar / borrar ---- */
 function exportData(){
@@ -1506,25 +1535,84 @@ function exportData(){
     a.download = 'taskflow-' + today() + '.json';
     document.body.appendChild(a); a.click();
     setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+    S.settings.lastExport = today(); save(); render();
     toast('Copia exportada');
   }catch(e){ toast('No se pudo exportar'); }
+}
+/* combina dos copias: gana el elemento con marca de tiempo más nueva */
+function fusionar(d){
+  const tumbas = {};
+  (S.deleted || []).concat(d.deleted || []).forEach(t => {
+    if(!tumbas[t.id] || t.mtime > tumbas[t.id]) tumbas[t.id] = t.mtime;
+  });
+  const res = {};
+  ['tasks','projects','notes','habits'].forEach(k => {
+    const mapa = new Map();
+    (S[k] || []).forEach(x => mapa.set(x.id, x));
+    (d[k] || []).forEach(x => {
+      const cur = mapa.get(x.id);
+      if(!cur){ mapa.set(x.id, x); return; }
+      const gana = (x.mtime || 0) > (cur.mtime || 0) ? x : cur;
+      if(k === 'habits') gana.log = Object.assign({}, cur.log || {}, x.log || {});
+      mapa.set(x.id, gana);
+    });
+    res[k] = Array.from(mapa.values()).filter(x => !(tumbas[x.id] && tumbas[x.id] > (x.mtime || 0)));
+  });
+  const corte = Date.now() - 90 * 86400000;
+  res.deleted = Object.keys(tumbas).filter(id => tumbas[id] > corte).map(id => ({ id, mtime:tumbas[id] }));
+  res.settings = S.settings;
+  return res;
 }
 function importData(file){
   const r = new FileReader();
   r.onload = () => {
+    let d;
     try{
-      const d = JSON.parse(r.result);
+      d = JSON.parse(r.result);
       if(!d || !Array.isArray(d.tasks)) throw new Error('formato');
-      const prev = JSON.parse(JSON.stringify(S));
-      S = {
+    }catch(e){ toast('Archivo no válido'); return; }
+    const prev = JSON.parse(JSON.stringify(S));
+    const vacio = !S.tasks.length && !S.projects.length && !S.notes.length && !S.habits.length;
+    const aplicar = (modo) => {
+      S = modo === 'combinar' ? fusionar(d) : {
         tasks:d.tasks, projects:d.projects || [], notes:d.notes || [], habits:d.habits || [],
-        settings: Object.assign({ theme:S.settings.theme, name:'Marco' }, d.settings || {})
+        deleted:d.deleted || [], settings: Object.assign({}, S.settings, { name:(d.settings||{}).name || S.settings.name })
       };
-      save(); applyTheme(); render();
-      toast('Copia importada · ' + S.tasks.length + ' tareas', 'Deshacer', () => { S = prev; save(); applyTheme(); render(); });
-    }catch(e){ toast('Archivo no válido'); }
+      save(); applyTheme(); closeModal(); render();
+      toast((modo === 'combinar' ? 'Copias combinadas · ' : 'Copia importada · ') + S.tasks.length + ' tareas', 'Deshacer',
+        () => { S = prev; save(); applyTheme(); render(); });
+    };
+    if(vacio){ aplicar('reemplazar'); return; }
+    openModal(`<div class="modal-h"><h3>Ya tienes datos aquí</h3>
+        <button type="button" class="icon-btn" data-act="close" aria-label="Cerrar">${icon('x')}</button></div>
+      <div class="modal-b">
+        <p class="dim" style="margin:0 0 6px">La copia trae <b>${(d.tasks||[]).length}</b> tareas, <b>${(d.projects||[]).length}</b> proyectos y <b>${(d.notes||[]).length}</b> notas.</p>
+        <p class="dim" style="margin:0">Aquí tienes <b>${S.tasks.length}</b> tareas. ¿Qué hago?</p>
+      </div>
+      <div class="modal-f">
+        <button type="button" class="btn" data-act="imp-replace">Reemplazar todo</button>
+        <button type="button" class="btn primary" data-act="imp-merge">Combinar (recomendado)</button>
+      </div>`);
+    impAplicar = aplicar;
   };
   r.readAsText(file);
+}
+let impAplicar = null;
+
+/* compartir la copia (en el celular abre WhatsApp, Drive, correo...) */
+async function compartirCopia(){
+  const json = JSON.stringify(S, null, 2);
+  const nombre = 'taskflow-' + today() + '.json';
+  try{
+    const f = new File([json], nombre, { type:'application/json' });
+    if(navigator.canShare && navigator.canShare({ files:[f] })){
+      await navigator.share({ files:[f], title:'Copia de TaskFlow' });
+      S.settings.lastExport = today(); save(); render();
+      toast('Copia compartida');
+      return;
+    }
+  }catch(e){ if(e && e.name === 'AbortError') return; }
+  exportData();
 }
 function resetData(){
   toast('¿Borrar TODO y empezar de cero?', 'Sí, borrar', () => {
@@ -1785,6 +1873,8 @@ function renderBruce(){
   const h = $('#bruceHead');
   if(h) h.innerHTML = `${bruceSVG()}<div><b>Bruce</b><small>Tu asistente · border collie</small></div>
     <span style="flex:1"></span><button class="icon-btn" data-act="bruce-close" aria-label="Cerrar">${icon('x')}</button>`;
+  const mb = $('.bruce-ask .mic');
+  if(mb){ mb.innerHTML = icon('mic'); mb.style.display = VozOK ? 'grid' : 'none'; }
   const b = $('#bruceBtn');
   if(b && !b.querySelector('svg')) b.insertAdjacentHTML('afterbegin', bruceSVG());
   const m = $('#bruceMsgs');
@@ -1815,6 +1905,58 @@ function preguntarBruce(q){
   const r = bruceResponde(q.trim());
   bruceLog.push({ who:'bruce', text:r });
   renderBruce();
+}
+
+/* ---- dictado por voz (Web Speech API del navegador) ---- */
+const VozOK = !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+let reco = null, escuchando = false, destinoVoz = 'bruce';
+function pintarMic(activo){
+  $$('[data-act="mic"]').forEach(b => b.classList.toggle('escuchando', !!activo));
+}
+function dictar(destino){
+  if(!VozOK){ toast('Tu navegador no permite dictado'); return; }
+  destinoVoz = destino || 'bruce';
+  if(escuchando){ try{ reco.stop(); }catch(e){} return; }
+  try{
+    const R = window.SpeechRecognition || window.webkitSpeechRecognition;
+    reco = new R();
+    reco.lang = 'es-CL';
+    reco.interimResults = true;
+    reco.continuous = false;
+    reco.maxAlternatives = 1;
+    let texto = '';
+    reco.onstart = () => { escuchando = true; pintarMic(true); toast('Te escucho...'); };
+    reco.onresult = ev => {
+      texto = '';
+      for(let i = 0; i < ev.results.length; i++) texto += ev.results[i][0].transcript;
+      const caja = destinoVoz === 'captura' ? $('#captureInput') : $('#bruceInput');
+      if(caja) caja.value = texto;
+    };
+    reco.onerror = ev => {
+      escuchando = false; pintarMic(false);
+      if(ev.error === 'not-allowed') toast('Falta permiso del micrófono');
+      else if(ev.error === 'no-speech') toast('No te escuché nada');
+      else toast('No pude usar el micrófono');
+    };
+    reco.onend = () => {
+      escuchando = false; pintarMic(false);
+      const t = (texto || '').trim();
+      if(!t) return;
+      if(destinoVoz === 'captura'){
+        const caja = $('#captureInput'); if(caja) caja.value = '';
+        quickAdd(t);
+      }else{
+        const caja = $('#bruceInput'); if(caja) caja.value = '';
+        /* si no es una pregunta conocida, lo tomo como tarea nueva */
+        const esPregunta = /^(hoy|habito|habitos|hábitos|atrasad|semana|proyecto|nota|manana|mañana|ayuda|hola|mover|gracias)/i.test(t);
+        if(esPregunta) preguntarBruce(t);
+        else { quickAdd(t); bruceLog.push({ who:'me', text:'🎤 ' + t });
+               bruceLog.push({ who:'bruce', text:`Anotada: "${parseQuick(t).title}". ¿Algo más?` });
+               abrirBruce(); renderBruce(); }
+      }
+    };
+    reco.start();
+  }catch(e){ toast('No pude iniciar el micrófono'); escuchando = false; pintarMic(false); }
 }
 
 /* ---- vigilancia proactiva ---- */
@@ -1916,6 +2058,9 @@ document.addEventListener('click', e => {
     case 'sub-toggle':  modalSubs[Number(el.dataset.i)].done = !modalSubs[Number(el.dataset.i)].done; refreshSubs(); break;
     case 'sub-del':     modalSubs.splice(Number(el.dataset.i), 1); refreshSubs(); break;
     case 'export':      exportData(); break;
+    case 'share':       compartirCopia(); break;
+    case 'imp-merge':   if(impAplicar) impAplicar('combinar'); break;
+    case 'imp-replace': if(impAplicar) impAplicar('reemplazar'); break;
     case 'import':      if($('#importFile')) $('#importFile').click(); break;
     case 'reset':       resetData(); break;
     case 'edit-name':   nameModal(); break;
@@ -1925,6 +2070,7 @@ document.addEventListener('click', e => {
       break;
     case 'bruce-close': cerrarBruce(); break;
     case 'bruce-ask':   preguntarBruce(el.dataset.q); break;
+    case 'mic':         dictar(el.dataset.destino); break;
     case 'tg-bruce':    S.settings.bruce = S.settings.bruce === false; save(); render(); toast('Bruce ' + (S.settings.bruce ? 'activo' : 'en silencio')); break;
     case 'tg-sound':    S.settings.sound = S.settings.sound === false; save(); render(); if(S.settings.sound) ladrido('saludo'); toast('Ladridos ' + (S.settings.sound ? 'activados' : 'silenciados')); break;
     case 'test-alarm':  unlockAudio(); ladrido('aviso'); pedirPermisoNotif(); toast('Así te avisa Bruce'); break;
@@ -1989,6 +2135,48 @@ document.addEventListener('change', e => {
   if(e.target.name === 'remind' && Number(e.target.value) > 0){ pedirPermisoNotif(); unlockAudio(); }
   if(e.target.dataset && e.target.dataset.act === 'habit-hour'){ S.settings.habitHour = Number(e.target.value); save(); toast('Repaso a las ' + pad(S.settings.habitHour) + ':00'); }
   if(e.target.dataset && e.target.dataset.act === 'nudge-every'){ S.settings.nudgeEvery = Number(e.target.value); save(); toast('Aviso cada ' + S.settings.nudgeEvery + ' min'); }
+});
+
+/* ---- arrastrar tarjetas entre columnas del kanban ---- */
+let arrastrando = null;
+document.addEventListener('dragstart', e => {
+  const c = e.target.closest && e.target.closest('[data-drag]');
+  if(!c) return;
+  arrastrando = c.dataset.drag;
+  c.classList.add('arrastrando');
+  try{ e.dataTransfer.setData('text/plain', arrastrando); e.dataTransfer.effectAllowed = 'move'; }catch(err){}
+});
+document.addEventListener('dragend', e => {
+  const c = e.target.closest && e.target.closest('[data-drag]');
+  if(c) c.classList.remove('arrastrando');
+  $$('.col.destino').forEach(x => x.classList.remove('destino'));
+  arrastrando = null;
+});
+document.addEventListener('dragover', e => {
+  const col = e.target.closest && e.target.closest('[data-col]');
+  if(!col || !arrastrando) return;
+  e.preventDefault();
+  try{ e.dataTransfer.dropEffect = 'move'; }catch(err){}
+  if(!col.classList.contains('destino')){
+    $$('.col.destino').forEach(x => x.classList.remove('destino'));
+    col.classList.add('destino');
+  }
+});
+document.addEventListener('dragleave', e => {
+  const col = e.target.closest && e.target.closest('[data-col]');
+  if(col && !col.contains(e.relatedTarget)) col.classList.remove('destino');
+});
+document.addEventListener('drop', e => {
+  const col = e.target.closest && e.target.closest('[data-col]');
+  if(!col) return;
+  e.preventDefault();
+  const id = arrastrando || (e.dataTransfer && e.dataTransfer.getData('text/plain'));
+  col.classList.remove('destino');
+  if(!id) return;
+  const t = taskById(id);
+  if(!t || t.status === col.dataset.col) return;
+  setStatus(id, col.dataset.col);
+  toast(col.dataset.col === 'completada' ? 'Completada' : (col.dataset.col === 'proceso' ? 'En proceso' : 'Pendiente'));
 });
 
 /* cerrar modal al clickear fuera */
