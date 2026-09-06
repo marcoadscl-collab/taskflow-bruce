@@ -303,10 +303,14 @@ select.pill{padding:5px 10px;outline:none}
 .ico-prev{width:46px;height:46px;border-radius:14px;background:var(--panel2);border:1px solid var(--line);display:grid;place-items:center;font-size:24px;flex:none}
 .ico-libre input{flex:1;min-width:0}
 /* selector de color visual */
-.colores{display:flex;flex-wrap:wrap;gap:9px}
-.col{width:34px;height:34px;border-radius:50%;border:2px solid transparent;box-shadow:inset 0 0 0 1px rgba(0,0,0,.25);transition:.13s}
-.col:hover{transform:scale(1.1)}
-.col.sel{border-color:var(--text);box-shadow:inset 0 0 0 1px rgba(0,0,0,.25),0 0 0 2px var(--panel)}
+.colores{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-start}
+.swatch{
+  flex:0 0 36px;width:36px;height:36px;min-height:0;padding:0;aspect-ratio:1;
+  border-radius:50%;border:2px solid transparent;box-sizing:border-box;
+  box-shadow:inset 0 0 0 1px rgba(0,0,0,.22);transition:transform .13s,border-color .13s
+}
+.swatch:hover{transform:scale(1.12)}
+.swatch.sel{border-color:var(--text);transform:scale(1.06)}
 @media(max-width:560px){.week{margin-left:0;width:100%}.day{flex:1}}
 
 /* ---------- summary ---------- */
@@ -1556,7 +1560,7 @@ function projectModal(id){
   openModal(modalShell(id ? 'Editar proyecto' : 'Nuevo proyecto', `
     <div class="field"><label>Nombre</label><input name="name" required value="${esc(d.name)}" placeholder="Ej: Trabajo"></div>
     <div class="field"><label>Color</label>
-      <div class="colores">${COLORS.map(c => `<button type="button" class="col ${d.color===c?'sel':''}" data-act="pick-color" data-c="${c}" style="background:${c}" aria-label="Color ${c}"></button>`).join('')}</div>
+      <div class="colores">${COLORS.map(c => `<button type="button" class="swatch ${d.color===c?'sel':''}" data-act="pick-color" data-c="${c}" style="background:${c}" aria-label="Color ${c}"></button>`).join('')}</div>
       <input type="hidden" name="color" id="colInput" value="${esc(d.color)}"></div>`),
   (data) => {
     if(!data.name.trim()) return;
@@ -2335,7 +2339,35 @@ function crearDesdeEscaneo(){
 /* =========================================================
    GRABADORA DE REUNIONES — dicta, transcribe y resume (todo local)
    ========================================================= */
-let recoNota = null, grabando = false, segmentos = [], parcial = '', t0Grab = 0, relojGrab = null;
+let recoNota = null, grabando = false, t0Grab = 0, relojGrab = null;
+/* baseTexto = sesiones ya cerradas · sesionTexto = sesión actual · parcial = lo que aún se está diciendo */
+let baseTexto = '', sesionTexto = '', parcial = '';
+function textoGrabado(){
+  return [baseTexto, sesionTexto, parcial].map(s => (s || '').trim()).filter(Boolean).join(' ').replace(/\s+/g, ' ');
+}
+/* parte un dictado en frases: usa puntuación si la hay, si no corta por conectores o cada 14 palabras */
+function aFrases(t){
+  const limpio = limpiaFrase(t);
+  if(!limpio) return [];
+  let frases;
+  if(/[.!?]/.test(limpio)){
+    frases = limpio.split(/[.!?]+/);
+  }else{
+    frases = limpio.split(/\s+(?=(?:entonces|luego|despu[eé]s|adem[aá]s|tambi[eé]n|ok|listo|bueno|por otro lado|y bueno)\b)/i);
+    const largas = [];
+    frases.forEach(f => {
+      const ws = f.trim().split(/\s+/);
+      if(ws.length <= 18) largas.push(f);
+      else for(let i = 0; i < ws.length; i += 14) largas.push(ws.slice(i, i + 14).join(' '));
+    });
+    frases = largas;
+  }
+  const out = [];
+  frases.map(limpiaFrase).filter(Boolean).forEach(f => {
+    if(!out.length || norm(out[out.length - 1]) !== norm(f)) out.push(f);   /* sin repetidas seguidas */
+  });
+  return out;
+}
 
 const STOP = new Set(('de la que el en y a los del se las por un para con no una su al lo como mas pero sus le ya o este si porque esta entre cuando muy sin sobre tambien me hasta hay donde quien desde todo nos durante todos uno les ni contra otros ese eso ante ellos e esto mi antes algunos otro otras otra tanto esa estos mucho quienes nada muchos cual poco ella estar estas algunas algo nosotros yo tu el ella eso ok bueno entonces osea igual claro').split(' '));
 /* compromisos reales: gatillo + verbo. Evita saludos y cosas ya cerradas. */
@@ -2374,14 +2406,15 @@ function resumirTexto(frases){
 
 function grabadoraHTML(){
   const mins = Math.floor((Date.now() - t0Grab) / 60000), segs = Math.floor(((Date.now() - t0Grab) % 60000) / 1000);
-  const txt = segmentos.concat(parcial ? [parcial] : []).join('\n');
+  const txt = textoGrabado();
+  const palabras = txt ? txt.split(/\s+/).length : 0;
   return `<div class="modal-h"><h3>${grabando ? 'Grabando reunión' : 'Nota de voz'}</h3>
       <button type="button" class="icon-btn" data-act="grab-cerrar" aria-label="Cerrar">${icon('x')}</button></div>
     <div class="modal-b">
       <div class="grab-top">
         <span class="grab-luz ${grabando ? 'on' : ''}"></span>
         <b id="grabReloj">${grabando ? pad(mins) + ':' + pad(segs) : '00:00'}</b>
-        <span class="dim" style="font-size:12.5px">${segmentos.length} frases captadas</span>
+        <span class="dim" style="font-size:12.5px">${palabras} palabras</span>
       </div>
       <div class="field"><label>Transcripción (puedes corregirla)</label>
         <textarea id="grabTexto" style="min-height:150px" ${grabando ? 'readonly' : ''}>${esc(txt)}</textarea></div>
@@ -2397,57 +2430,80 @@ function grabadoraHTML(){
 }
 function abrirGrabadora(){
   if(!VozOK){ toast('Tu navegador no permite dictado'); return; }
-  segmentos = []; parcial = ''; t0Grab = Date.now();
+  baseTexto = ''; sesionTexto = ''; parcial = ''; t0Grab = Date.now();
   openModal(grabadoraHTML());
   iniciarGrabacion();
 }
 function pintarGrabadora(){
   const caja = $('#grabTexto');
-  if(caja && grabando){ caja.value = segmentos.concat(parcial ? [parcial] : []).join('\n'); caja.scrollTop = caja.scrollHeight; }
+  if(caja && grabando){ caja.value = textoGrabado(); caja.scrollTop = caja.scrollHeight; }
   const r = $('#grabReloj');
   if(r && grabando){
     const d = Date.now() - t0Grab;
     r.textContent = pad(Math.floor(d / 60000)) + ':' + pad(Math.floor((d % 60000) / 1000));
   }
 }
+function cerrarSesionVoz(){
+  /* la sesión que termina pasa a ser texto fijo; así nada se duplica al reanudar */
+  const s = (sesionTexto + ' ' + parcial).trim();
+  if(s) baseTexto = (baseTexto + ' ' + s).trim();
+  sesionTexto = ''; parcial = '';
+}
 function iniciarGrabacion(){
+  if(grabando) return;                       /* evita dos micrófonos a la vez */
   try{
+    const caja = $('#grabTexto');
+    if(caja && !grabando){ baseTexto = caja.value.trim(); sesionTexto = ''; parcial = ''; }
     const R = window.SpeechRecognition || window.webkitSpeechRecognition;
+    try{ recoNota && recoNota.abort(); }catch(e){}
     recoNota = new R();
     recoNota.lang = 'es-CL';
     recoNota.continuous = true;
     recoNota.interimResults = true;
     recoNota.onresult = ev => {
-      parcial = '';
-      for(let i = ev.resultIndex; i < ev.results.length; i++){
-        const txt = ev.results[i][0].transcript.trim();
-        if(!txt) continue;
-        if(ev.results[i].isFinal) segmentos.push(txt); else parcial = txt;
+      /* se reconstruye la sesión completa en cada evento: si el navegador
+         reenvía resultados anteriores, el texto no se repite */
+      let fin = '', inter = '';
+      for(let i = 0; i < ev.results.length; i++){
+        const t = (ev.results[i][0] && ev.results[i][0].transcript) || '';
+        if(!t.trim()) continue;
+        if(ev.results[i].isFinal) fin += t + ' '; else inter = t;
       }
+      sesionTexto = fin.trim();
+      parcial = inter.trim();
       pintarGrabadora();
     };
-    recoNota.onerror = ev => { if(ev.error === 'not-allowed'){ grabando = false; toast('Falta permiso del micrófono'); openModal(grabadoraHTML()); } };
-    recoNota.onend = () => { if(grabando){ try{ recoNota.start(); }catch(e){} } };
+    recoNota.onerror = ev => {
+      if(ev.error === 'not-allowed' || ev.error === 'service-not-allowed'){
+        grabando = false; clearInterval(relojGrab); cerrarSesionVoz();
+        toast('Falta permiso del micrófono'); openModal(grabadoraHTML());
+      }
+    };
+    recoNota.onend = () => {
+      cerrarSesionVoz();                     /* fija lo dictado antes de reanudar */
+      if(grabando){ try{ recoNota.start(); }catch(e){} }
+      pintarGrabadora();
+    };
     recoNota.start();
     grabando = true;
     if(!t0Grab) t0Grab = Date.now();
     clearInterval(relojGrab);
     relojGrab = setInterval(pintarGrabadora, 1000);
     openModal(grabadoraHTML());
-  }catch(e){ toast('No pude iniciar el micrófono'); }
+  }catch(e){ grabando = false; toast('No pude iniciar el micrófono'); }
 }
 function pararGrabacion(){
   grabando = false;
   clearInterval(relojGrab);
   try{ recoNota && recoNota.stop(); }catch(e){}
-  if(parcial){ segmentos.push(parcial); parcial = ''; }
+  cerrarSesionVoz();
   openModal(grabadoraHTML());
 }
 function guardarReunion(){
   const caja = $('#grabTexto');
-  const texto = caja ? caja.value.trim() : segmentos.join('\n');
+  const texto = limpiaFrase(caja ? caja.value : textoGrabado());
   if(!texto){ toast('No hay nada que guardar'); return; }
-  const frases = texto.split('\n').map(limpiaFrase).filter(Boolean);
+  const frases = aFrases(texto);
   const { resumen, acciones } = resumirTexto(frases);
   const n = touch({
     id:uid(),
@@ -2464,8 +2520,9 @@ function guardarReunion(){
 }
 function verResumen(id){
   const n = noteById(id); if(!n) return;
-  const res = (n.resumen && n.resumen.length) ? n.resumen : resumirTexto(String(n.content || '').split('\n')).resumen;
-  const acc = (n.acciones && n.acciones.length) ? n.acciones : resumirTexto(String(n.content || '').split('\n')).acciones;
+  const calc = resumirTexto(aFrases(String(n.content || '')));
+  const res = (n.resumen && n.resumen.length) ? n.resumen : calc.resumen;
+  const acc = (n.acciones && n.acciones.length) ? n.acciones : calc.acciones;
   openModal(`<div class="modal-h"><h3>${esc(n.title)}</h3>
       <button type="button" class="icon-btn" data-act="close" aria-label="Cerrar">${icon('x')}</button></div>
     <div class="modal-b">
@@ -2988,7 +3045,7 @@ document.addEventListener('click', e => {
     case 'grab-parar':  pararGrabacion(); break;
     case 'grab-iniciar':iniciarGrabacion(); break;
     case 'grab-guardar':guardarReunion(); break;
-    case 'grab-cerrar': grabando = false; clearInterval(relojGrab); try{ recoNota && recoNota.stop(); }catch(e){} closeModal(); break;
+    case 'grab-cerrar': grabando = false; clearInterval(relojGrab); try{ recoNota && recoNota.abort(); }catch(e){} closeModal(); break;
     case 'ver-resumen': verResumen(id); break;
     case 'acc-tareas':  crearTareasDeNota(id); break;
     case 'ics':         exportarICS(); break;
@@ -3028,7 +3085,7 @@ document.addEventListener('click', e => {
     }
     case 'pick-color': {
       const inp = $('#colInput'); if(inp) inp.value = el.dataset.c;
-      $$('.col').forEach(b => b.classList.toggle('sel', b === el));
+      $$('.swatch').forEach(b => b.classList.toggle('sel', b === el));
       break;
     }
   }
