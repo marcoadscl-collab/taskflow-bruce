@@ -2480,7 +2480,8 @@ function nubeModal(tipo){
   (data) => {
     if(data.tipo === 'drive'){
       if(!data.clientId || !data.clientId.trim()) return;
-      S.settings.nube = { tipo:'drive', clientId:data.clientId.trim(), last:'' };
+      S.settings.nube = { tipo:'drive', clientId:data.clientId.trim().replace(/\s+/g,''), last:'' };
+      gisToken = null; gisExp = 0; forzarCuenta = true;   /* siempre pregunta con qué cuenta */
     }else{
       if(!data.url || !data.key || !data.pass) return;
       S.settings.nube = { tipo:'supabase', url:data.url.trim(), key:data.key.trim(), pass:data.pass.trim(), last:'' };
