@@ -1301,7 +1301,7 @@ function renderPerfil(){
   <div class="section-title">Nube · sincronizar PC y teléfono</div>
   <div class="card" style="padding:0;overflow:hidden">
     ${NUBE().tipo
-      ? `<button class="rowitem" data-act="nube">${icon('cloud')} <span>Conectado a ${nubeNombre()}</span><span class="chev">Editar</span></button>
+      ? `<button class="rowitem" data-act="nube">${icon('cloud')} <span>Conectado a ${nubeNombre()}${NUBE().tipo==='drive' ? ` <small class="dim">···${esc(String(NUBE().clientId).slice(-12))}</small>` : ''}</span><span class="chev">Editar</span></button>
          <button class="rowitem" data-act="sync-now" data-nube="ok">${icon('repeat')} <span>Sincronizar ahora</span>
            <span class="chev">${S.settings.nube.last ? new Date(S.settings.nube.last).toLocaleString('es-CL',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}) : 'nunca'}</span></button>
          ${NUBE().tipo === 'drive' ? `<button class="rowitem" data-act="drive-cuenta">${icon('user')} <span>Cambiar de cuenta de Google</span><span class="chev">›</span></button>` : ''}`
@@ -2758,6 +2758,23 @@ tickClock();
 setInterval(tickClock, 1000);
 checkReminders();
 setInterval(checkReminders, 30000);
+
+/* configuración por link: ...?gid=TU_ID_DE_CLIENTE deja Drive listo sin escribir nada */
+(function(){
+  try{
+    const p = new URLSearchParams(location.search);
+    const gid = (p.get('gid') || '').trim().replace(/\s+/g, '');
+    if(gid && /\.apps\.googleusercontent\.com$/.test(gid)){
+      S.settings.nube = { tipo:'drive', clientId:gid, last:'' };
+      save();
+      gisToken = null; gisExp = 0; forzarCuenta = true;
+      history.replaceState(null, '', location.pathname);
+      render();
+      toast('Google Drive configurado · elige tu cuenta');
+      setTimeout(() => sincronizar(), 400);
+    }
+  }catch(e){}
+})();
 
 /* nube: al abrir, al volver a la pestaña y cada 3 minutos */
 if(nubeLista()) sincronizar(true);
