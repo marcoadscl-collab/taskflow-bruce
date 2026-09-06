@@ -367,6 +367,20 @@ select.pill{padding:5px 10px;outline:none}
 .rowitem:hover{background:var(--panel2)}
 .rowitem .chev{margin-left:auto;color:var(--muted)}
 
+/* lo que viene (dentro de Hoy) */
+.viene{padding:6px 14px 14px}
+.viene-dia{display:flex;gap:12px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--line)}
+.viene-dia:last-of-type{border-bottom:none}
+.viene-fecha{flex:none;width:96px;text-align:left;font-size:12.5px;font-weight:700;color:var(--accent-ink);padding-top:5px;text-transform:capitalize}
+.viene-fecha b{display:block;font-size:10.5px;color:var(--muted);font-weight:600;text-transform:none}
+.viene-tareas{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.viene-t{display:flex;align-items:center;gap:8px;width:100%;text-align:left;padding:6px 9px;border-radius:9px;font-size:13.2px;transition:.12s}
+.viene-t:hover{background:var(--panel2)}
+.viene-t .vt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.viene-t .vh{font-size:11.5px;color:var(--muted);font-weight:600}
+.viene-t .vp{width:7px;height:7px;border-radius:50%;flex:none}
+@media(max-width:560px){.viene-dia{flex-direction:column;gap:2px}.viene-fecha{width:auto;padding-top:0}.viene-fecha b{display:inline;margin-left:6px}}
+
 /* ---------- tiles de estadística ---------- */
 .tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:20px}
 .tile{background:var(--panel);border:1px solid var(--line);border-radius:var(--r-sm);padding:15px 10px;text-align:center;box-shadow:var(--shadow)}
@@ -716,7 +730,6 @@ function icon(name, size){
 const NAV = [
   { id:'hoy',       ic:'home',     label:'Hoy' },
   { id:'agenda',    ic:'calendar', label:'Agenda' },
-  { id:'proximos',  ic:'clock',    label:'Próximos' },
   { id:'proyectos', ic:'folder',   label:'Proyectos' },
   { id:'notas',     ic:'note',     label:'Notas' },
   { id:'habitos',   ic:'repeat',   label:'Hábitos' },
@@ -909,7 +922,7 @@ function renderHoy(){
       <p class="dim">Sin pendientes para hoy.${manana ? ` Mañana tienes <b>${manana}</b>.` : ''}</p>
       <div style="display:flex;gap:8px;justify-content:center;margin-top:14px;flex-wrap:wrap">
         <button class="btn primary sm" data-act="new-task">+ Añadir tarea</button>
-        ${manana ? `<button class="btn sm" data-act="view" data-view="proximos">Ver próximos</button>` : ''}
+        ${manana ? `<button class="btn sm" data-act="view" data-view="agenda">Ver agenda</button>` : ''}
       </div>
     </div>` : `
   ${prio.length ? `<div class="section-title">${icon('flame')} Prioridad <span class="count">${prio.length}</span></div>${taskList(prio)}` : ''}
@@ -917,7 +930,45 @@ function renderHoy(){
   ${taskList(norm)}`)}
 
   ${done.length ? `<div class="section-title">Completadas <span class="count">${done.length}</span></div>${taskList(done)}` : ''}
+
+  ${loQueViene()}
   `;
+}
+
+/* Lo que viene: reemplaza a la vista "Próximos" dentro de Hoy */
+function loQueViene(){
+  const d0 = today(), d1 = key(addDays(new Date(), 1));
+  const futuras = S.tasks.filter(t => !isDone(t) && t.date && t.date > d0).sort(byDate);
+  if(!futuras.length) return '';
+  const limite = key(addDays(new Date(), 7));
+  const cerca = futuras.filter(t => t.date <= limite);
+  const lejos = futuras.length - cerca.length;
+  const porDia = {};
+  cerca.slice(0, 8).forEach(t => { (porDia[t.date] = porDia[t.date] || []).push(t); });
+
+  const titulo = k => k === d1 ? 'Mañana' : DIAS[fromKey(k).getDay()] + ' ' + fromKey(k).getDate();
+  return `
+  <div class="section-title">${icon('clock')} Lo que viene <span class="count">${futuras.length}</span>
+    <span style="flex:1"></span>
+    <button class="mini" data-act="view" data-view="agenda">Ver agenda</button></div>
+  <div class="card viene">
+    ${Object.keys(porDia).sort().map(k => `
+      <div class="viene-dia">
+        <button class="viene-fecha" data-act="go-day" data-k="${k}">${titulo(k)}<b>${porDia[k].length}</b></button>
+        <div class="viene-tareas">
+          ${porDia[k].map(t => {
+            const p = projById(t.projectId);
+            return `<button class="viene-t" data-act="edit-task" data-id="${t.id}">
+              <span class="dot ${t.priority}"></span>
+              <span class="vt">${esc(t.title)}</span>
+              ${t.time ? `<span class="vh">${esc(t.time)}</span>` : ''}
+              ${p ? `<span class="vp" style="background:${esc(p.color)}"></span>` : ''}
+            </button>`;
+          }).join('')}
+        </div>
+      </div>`).join('')}
+    ${lejos ? `<p class="hint" style="margin:10px 4px 0">Y ${lejos} más adelante · <b data-act="view" data-view="agenda" style="cursor:pointer;color:var(--accent-ink)">ver agenda</b></p>` : ''}
+  </div>`;
 }
 
 function renderProximos(){
@@ -1342,7 +1393,7 @@ function donutHTML(){
   </div>`;
 }
 
-const VIEWS = { hoy:renderHoy, agenda:renderAgenda, proximos:renderProximos, proyectos:renderProyectos, notas:renderNotas, habitos:renderHabitos, resumen:renderResumen, perfil:renderPerfil };
+const VIEWS = { hoy:renderHoy, agenda:renderAgenda, proyectos:renderProyectos, notas:renderNotas, habitos:renderHabitos, resumen:renderResumen, perfil:renderPerfil };
 function render(){
   renderNav();
   $('#viewRoot').innerHTML = ui.q.trim() ? renderBusqueda() : (VIEWS[ui.view] || renderHoy)();
@@ -2174,6 +2225,8 @@ function cargarOCR(){
   return new Promise((ok, err) => {
     const s = document.createElement('script');
     s.src = 'https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.1.1/tesseract.min.js';
+    s.crossOrigin = 'anonymous';
+    s.referrerPolicy = 'no-referrer';
     s.onload = ok; s.onerror = err;
     document.head.appendChild(s);
   });
