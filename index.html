@@ -363,6 +363,14 @@ select.pill{padding:5px 10px;outline:none}
 .ring::after{content:'';position:absolute;inset:12px;border-radius:50%;background:var(--panel)}
 .ring b{position:absolute;inset:0;display:grid;place-items:center;font-size:22px;font-weight:750;z-index:1;letter-spacing:-1px}
 
+/* ---------- detalle de tarea ---------- */
+.det-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+.det-estado{display:flex;gap:7px;flex-wrap:wrap}
+.det-nota{margin-top:14px;background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-size:13.4px;white-space:pre-wrap;color:var(--muted)}
+.task-body{cursor:pointer;border-radius:8px}
+.task-body:hover .task-title{color:var(--accent-ink)}
+.viene-t{cursor:pointer}
+
 /* ---------- subtareas ---------- */
 .subs{display:flex;flex-direction:column;gap:6px;margin-bottom:9px}
 .subitem{display:flex;align-items:center;gap:9px;background:var(--panel2);border:1px solid var(--line);border-radius:11px;padding:7px 10px;font-size:13px}
@@ -680,6 +688,11 @@ function applyFilters(list){
   if(ui.proj)                     r = r.filter(t => t.projectId === ui.proj);
   return r;
 }
+/* "09:00 – 10:30" si hay hora de término, si no solo la de inicio */
+function horario(t){
+  if(!t.time) return '';
+  return t.timeEnd ? t.time + ' – ' + t.timeEnd : t.time;
+}
 function symbolFor(t){
   if(t.status === 'completada') return '✓';
   if(t.status === 'proceso')    return '›';
@@ -823,11 +836,11 @@ function taskItem(t){
   return `<div class="task ${cls}">
     <button class="bullet ${t.status}${t.migrated && !isDone(t) ? ' migrada':''}" data-act="toggle" data-id="${t.id}"
             aria-pressed="${isDone(t)}" aria-label="${isDone(t)?'Marcar como pendiente':'Completar'}: ${n}" title="Cambiar estado">${symbolFor(t)}</button>
-    <div class="task-body">
+    <div class="task-body" data-act="detalle" data-id="${t.id}" role="button" tabindex="0" title="Ver la tarea completa">
       <div class="task-title">${alta ? '<span class="bang">!</span>':''}${n}</div>
       <div class="task-meta">
         ${foco ? `<span class="chip">${icon('target')} Foco</span>` : ''}
-        ${t.time ? `<span class="chip">${icon('clock')} ${esc(t.time)}</span>` : ''}
+        ${t.time ? `<span class="chip">${icon('clock')} ${esc(horario(t))}</span>` : ''}
         <span class="chip">${icon('calendar')} ${esc(shortDate(t.date))}</span>
         ${p ? `<span class="chip"><i style="background:${esc(p.color)}"></i>${esc(p.name)}</span>` : ''}
         <span class="chip"><span class="dot ${t.priority}"></span>${pr.label}</span>
@@ -983,7 +996,7 @@ function loQueViene(){
         <div class="viene-tareas">
           ${porDia[k].map(t => {
             const p = projById(t.projectId);
-            return `<button class="viene-t" data-act="edit-task" data-id="${t.id}">
+            return `<button class="viene-t" data-act="detalle" data-id="${t.id}">
               <span class="dot ${t.priority}"></span>
               <span class="vt">${esc(t.title)}</span>
               ${t.time ? `<span class="vh">${esc(t.time)}</span>` : ''}
@@ -1073,7 +1086,7 @@ function renderProyectoDetalle(id){
       const items = ts.filter(t => (t.status === c[0]) || (c[0]==='pendiente' && t.status !== 'proceso' && t.status !== 'completada'));
       return `<div class="card col" data-col="${c[0]}"><h3>${c[1]} · ${items.length}</h3>
         ${items.map(t => `<div class="kcard ${isDone(t)?'done':''}" draggable="true" data-drag="${t.id}">
-          <div class="kt">${t.priority==='alta' && !isDone(t) ? '<span class="bang">!</span>':''}${esc(t.title)}</div>
+          <div class="kt" data-act="detalle" data-id="${t.id}" role="button" tabindex="0" style="cursor:pointer">${t.priority==='alta' && !isDone(t) ? '<span class="bang">!</span>':''}${esc(t.title)}</div>
           <div class="krow">
             <span class="chip">📅 ${esc(shortDate(t.date))}</span>
             <span class="chip"><span class="dot ${t.priority}"></span>${PRIOS[t.priority].label}</span>
@@ -1290,10 +1303,10 @@ function renderAgenda(){
   const item = t => {
     const p = projById(t.projectId);
     return `<div class="aitem">
-      <div class="atime">${t.time ? esc(t.time) : '—'}</div>
+      <div class="atime">${t.time ? esc(t.time) + (t.timeEnd ? '<br><small style="opacity:.6">' + esc(t.timeEnd) + '</small>' : '') : '—'}</div>
       <div class="acard ${isDone(t)?'done':''}" style="border-left-color:${p ? esc(p.color) : 'var(--accent)'}">
         <button class="bullet ${t.status}" data-act="toggle" data-id="${t.id}" aria-label="Completar ${esc(t.title)}">${symbolFor(t)}</button>
-        <div style="flex:1;min-width:0">
+        <div style="flex:1;min-width:0;cursor:pointer" data-act="detalle" data-id="${t.id}" role="button" tabindex="0">
           <div class="task-title" style="${isDone(t)?'text-decoration:line-through;color:var(--muted)':''}">${esc(t.title)}</div>
           <div class="task-meta">
             ${p ? `<span class="chip"><i style="background:${esc(p.color)}"></i>${esc(p.name)}</span>` : ''}
@@ -1453,6 +1466,71 @@ function modalShell(title, body, extraLeft){
 const projOptions = sel => `<option value="">Sin proyecto</option>` +
   S.projects.map(p => `<option value="${p.id}" ${sel===p.id?'selected':''}>${esc(p.name)}</option>`).join('');
 
+/* =========================================================
+   DETALLE DE TAREA — se abre tocando la tarea en cualquier vista
+   ========================================================= */
+function detalleTarea(id){
+  const t = taskById(id);
+  if(!t){ toast('Esa tarea ya no existe'); return; }
+  const p = projById(t.projectId);
+  const subs = t.subtasks || [];
+  const hechas = subs.filter(s => s.done).length;
+  const pct = subs.length ? Math.round(hechas / subs.length * 100) : 0;
+
+  openModal(`<div class="modal-h">
+      <h3 style="flex:1;min-width:0">${t.priority==='alta' && !isDone(t) ? '<span class="bang">!</span>':''}${esc(t.title)}</h3>
+      <button type="button" class="icon-btn" data-act="close" aria-label="Cerrar">${icon('x')}</button></div>
+    <div class="modal-b">
+      <div class="det-chips">
+        <span class="chip">${icon('calendar')} ${esc(shortDate(t.date))}</span>
+        ${t.time ? `<span class="chip">${icon('clock')} ${esc(horario(t))}</span>` : ''}
+        ${p ? `<span class="chip"><i style="background:${esc(p.color)}"></i>${esc(p.name)}</span>` : ''}
+        <span class="chip"><span class="dot ${t.priority}"></span>${PRIOS[t.priority].label}</span>
+        ${t.remind ? `<span class="chip">${icon('bell')} ${t.remind} min antes</span>` : ''}
+        ${t.migrated && !isDone(t) ? '<span class="chip">→ Migrada</span>' : ''}
+      </div>
+
+      <div class="det-estado">
+        ${[['pendiente','Pendiente'],['proceso','En proceso'],['completada','Completada']].map(e =>
+          `<button type="button" class="pill ${t.status===e[0]?'active':''}" data-act="det-estado" data-id="${t.id}" data-e="${e[0]}">${e[1]}</button>`).join('')}
+      </div>
+
+      ${t.note ? `<div class="det-nota">${esc(t.note)}</div>` : ''}
+
+      <div class="section-title" style="margin:18px 0 8px">Subtareas
+        ${subs.length ? `<span class="count">${hechas}/${subs.length}</span>` : ''}</div>
+      ${subs.length ? `<div class="bar" style="margin:0 0 10px"><span style="width:${pct}%"></span></div>` : ''}
+      <div class="subs">
+        ${subs.map((s, i) => `<div class="subitem ${s.done?'done':''}">
+            <button type="button" class="bullet ${s.done?'completada':''}" data-act="det-sub" data-id="${t.id}" data-i="${i}"
+                    style="width:19px;height:19px;font-size:11px" aria-label="Marcar ${esc(s.text)}">${s.done?'✓':''}</button>
+            <span>${esc(s.text)}</span>
+          </div>`).join('')}
+        <div class="subadd">
+          <input id="detSub" placeholder="Añadir subtarea y Enter..." data-id="${t.id}" autocomplete="off" aria-label="Nueva subtarea">
+          <button type="button" class="btn sm" data-act="det-sub-add" data-id="${t.id}">+</button>
+        </div>
+      </div>
+    </div>
+    <div class="modal-f">
+      <button type="button" class="btn danger left" data-act="del-task" data-id="${t.id}">${icon('trash')}</button>
+      <button type="button" class="btn" data-act="date-task" data-id="${t.id}">${icon('calendar')} Fecha</button>
+      <button type="button" class="btn" data-act="edit-task" data-id="${t.id}">${icon('edit')} Editar</button>
+      <button type="button" class="btn primary" data-act="det-toggle" data-id="${t.id}">
+        ${isDone(t) ? 'Reabrir' : '✓ Completar'}</button>
+    </div>`);
+}
+function detSubAdd(id){
+  const t = taskById(id), i = $('#detSub');
+  if(!t || !i) return;
+  const v = i.value.trim(); if(!v) return;
+  t.subtasks = t.subtasks || [];
+  t.subtasks.push({ text:v, done:false });
+  /* si estaba completada y aparece algo por hacer, vuelve a pendiente */
+  if(t.status === 'completada'){ t.status = 'pendiente'; t.completedAt = ''; }
+  touch(t); save(); render(); detalleTarea(id);
+}
+
 /* ---- subtareas dentro del modal ---- */
 let modalSubs = [];
 function subsHTML(){
@@ -1485,13 +1563,16 @@ function addSub(){
 }
 function taskModal(id, preset){
   const t = id ? taskById(id) : null;
-  const d = t || Object.assign({ title:'', date:today(), time:'', projectId:ui.project||'', priority:'media', status:'pendiente', note:'', remind:0 }, preset || {});
+  const d = t || Object.assign({ title:'', date:today(), time:'', timeEnd:'', projectId:ui.project||'', priority:'media', status:'pendiente', note:'', remind:0 }, preset || {});
   modalSubs = (d.subtasks || []).map(s => ({ text:s.text, done:!!s.done }));
   openModal(modalShell(id ? 'Editar tarea' : 'Nueva tarea', `
     <div class="field"><label>Nombre</label><input name="title" required value="${esc(d.title)}" placeholder="Ej: Enviar reporte semanal"></div>
     <div class="row2">
       <div class="field"><label>Fecha</label><input type="date" name="date" value="${esc(d.date||today())}"></div>
-      <div class="field"><label>Hora (opcional)</label><input type="time" name="time" value="${esc(d.time||'')}"></div>
+      <div class="field"><label>Hora inicio (opcional)</label><input type="time" name="time" value="${esc(d.time||'')}"></div>
+    </div>
+    <div class="row2">
+      <div class="field"><label>Hora término (opcional)</label><input type="time" name="timeEnd" value="${esc(d.timeEnd||'')}"></div>
     </div>
     <div class="row2">
       <div class="field"><label>Proyecto</label><select name="projectId">${projOptions(d.projectId)}</select></div>
@@ -1625,7 +1706,7 @@ function habitModal(id){
    "Enviar reporte mañana 9:30 !alta #RedBull" -> fecha, hora, prioridad y proyecto */
 function parseQuick(raw){
   let s = ' ' + String(raw).trim() + ' ';
-  const out = { title:'', date:today(), time:'', projectId:'', priority:'media' };
+  const out = { title:'', date:today(), time:'', timeEnd:'', projectId:'', priority:'media' };
   const t = new Date();
 
   const pm = s.match(/\s!(alta|media|baja|a|m|b)\b/i);
@@ -1643,7 +1724,14 @@ function parseQuick(raw){
     if(p){ out.projectId = p.id; s = s.replace(gm[0], ' '); }
   }
 
-  const hm = s.match(/\s(?:a\s+las\s+)?([01]?\d|2[0-3]):([0-5]\d)\b/);
+  /* rango: "9:00-10:30", "de 9 a 11", "09:00 a 10:00" */
+  const rg = s.match(/\s(?:de\s+)?([01]?\d|2[0-3])(?::([0-5]\d))?\s*(?:-|–|a las|a)\s*([01]?\d|2[0-3])(?::([0-5]\d))?\b/i);
+  if(rg){
+    out.time = pad(Number(rg[1])) + ':' + (rg[2] || '00');
+    out.timeEnd = pad(Number(rg[3])) + ':' + (rg[4] || '00');
+    s = s.replace(rg[0], ' ');
+  }
+  const hm = !out.time && s.match(/\s(?:a\s+las\s+)?([01]?\d|2[0-3]):([0-5]\d)\b/);
   if(hm){ out.time = pad(Number(hm[1])) + ':' + hm[2]; s = s.replace(hm[0], ' '); }
 
   let ok = false;
@@ -1683,7 +1771,7 @@ function quickAdd(raw){
   const p = parseQuick(raw);
   if(!p.title){ toast('Escribe un nombre para la tarea'); return; }
   const t = {
-    id:uid(), title:p.title, date:p.date, time:p.time,
+    id:uid(), title:p.title, date:p.date, time:p.time, timeEnd:p.timeEnd,
     projectId: p.projectId || (ui.view === 'proyectos' && ui.project ? ui.project : ''),
     priority:p.priority, status:'pendiente', note:'', migrated:false, completedAt:'',
     createdAt:new Date().toISOString()
@@ -2319,7 +2407,7 @@ function crearDesdeEscaneo(){
     const p = parseQuick(l);
     if(!p.title) return;
     const t = touch({
-      id:uid(), title:p.title, date:p.date !== today() ? p.date : fecha, time:p.time,
+      id:uid(), title:p.title, date:p.date !== today() ? p.date : fecha, time:p.time, timeEnd:p.timeEnd,
       projectId: p.projectId || proj, priority: p.priority !== 'media' ? p.priority : prio,
       status:'pendiente', note:'Desde una nota escaneada', migrated:false, completedAt:'',
       remind:0, subtasks:[], createdAt:new Date().toISOString()
@@ -2547,7 +2635,7 @@ function crearTareasDeNota(id){
   marcadas.forEach(txt => {
     const p = parseQuick(txt);
     const t = touch({
-      id:uid(), title:(p.title || txt).slice(0, 120), date:p.date, time:p.time, projectId:p.projectId,
+      id:uid(), title:(p.title || txt).slice(0, 120), date:p.date, time:p.time, timeEnd:p.timeEnd, projectId:p.projectId,
       priority:p.priority, status:'pendiente', note:'Desde una reunión', migrated:false, completedAt:'',
       remind:0, subtasks:[], createdAt:new Date().toISOString()
     });
@@ -3049,6 +3137,22 @@ document.addEventListener('click', e => {
     case 'ver-resumen': verResumen(id); break;
     case 'acc-tareas':  crearTareasDeNota(id); break;
     case 'ics':         exportarICS(); break;
+    case 'detalle':     detalleTarea(id); break;
+    case 'det-sub': {
+      const t = taskById(id);
+      if(t && t.subtasks && t.subtasks[Number(el.dataset.i)]){
+        const s = t.subtasks[Number(el.dataset.i)];
+        s.done = !s.done;
+        /* si marcas todas, la tarea se da por hecha */
+        if(t.subtasks.every(x => x.done) && t.status !== 'completada'){ t.status = 'completada'; t.completedAt = today(); }
+        else if(t.status === 'completada' && !t.subtasks.every(x => x.done)){ t.status = 'pendiente'; t.completedAt = ''; }
+        touch(t); save(); render(); detalleTarea(id);
+      }
+      break;
+    }
+    case 'det-sub-add': detSubAdd(id); break;
+    case 'det-estado':  setStatus(id, el.dataset.e); detalleTarea(id); break;
+    case 'det-toggle':  toggleTask(id); detalleTarea(id); break;
     case 'edit-task':   taskModal(id); break;
     case 'del-task':    delTask(id); break;
     case 'date-task':   dateModal(id); break;
@@ -3186,6 +3290,7 @@ document.addEventListener('keydown', e => {
     else if(ui.q){ ui.q = ''; $('#search').value = ''; render(); $('#search').blur(); }
     return;
   }
+  if(e.target.id === 'detSub' && e.key === 'Enter'){ e.preventDefault(); detSubAdd(e.target.dataset.id); return; }
   if(e.target.id === 'subInput' && e.key === 'Enter'){ e.preventDefault(); addSub(); return; }
   if(typing || e.ctrlKey || e.metaKey || e.altKey) return;
   if(e.key === '/'){ e.preventDefault(); $('#search').focus(); return; }
