@@ -1301,9 +1301,11 @@ function renderPerfil(){
   <div class="section-title">Nube · sincronizar PC y teléfono</div>
   <div class="card" style="padding:0;overflow:hidden">
     ${NUBE().tipo
-      ? `<button class="rowitem" data-act="nube">${icon('cloud')} <span>Conectado a ${nubeNombre()}${NUBE().tipo==='drive' ? ` <small class="dim">···${esc(String(NUBE().clientId).slice(-12))}</small>` : ''}</span><span class="chev">Editar</span></button>
-         <button class="rowitem" data-act="sync-now" data-nube="ok">${icon('repeat')} <span>Sincronizar ahora</span>
-           <span class="chev">${S.settings.nube.last ? new Date(S.settings.nube.last).toLocaleString('es-CL',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}) : 'nunca'}</span></button>
+      ? `<button class="rowitem" data-act="nube">${icon('cloud')} <span>${nubeNombre()}${NUBE().email ? ` · <b>${esc(NUBE().email)}</b>` : ''}</span><span class="chev">Editar</span></button>
+         ${NUBE().tipo === 'drive' && !tokenGuardado()
+            ? `<button class="rowitem" data-act="sync-now" style="color:var(--accent-ink)">${icon('cloud')} <span>Reconectar Drive (permiso vencido)</span><span class="chev">›</span></button>`
+            : `<button class="rowitem" data-act="sync-now" data-nube="ok">${icon('repeat')} <span>Sincronizar ahora</span>
+                <span class="chev">${S.settings.nube.last ? new Date(S.settings.nube.last).toLocaleString('es-CL',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}) : 'nunca'}</span></button>`}
          ${NUBE().tipo === 'drive' ? `<button class="rowitem" data-act="drive-cuenta">${icon('user')} <span>Cambiar de cuenta de Google</span><span class="chev">›</span></button>` : ''}`
       : `<button class="rowitem" data-act="nube" data-tipo="drive">${icon('cloud')} <span>Guardar en mi Google Drive</span><span class="chev">›</span></button>
          <button class="rowitem" data-act="nube" data-tipo="supabase">${icon('cloud')} <span>Guardar en Supabase (cifrado)</span><span class="chev">›</span></button>`}
@@ -2296,9 +2298,23 @@ function cargarGIS(){
     document.head.appendChild(s);
   });
 }
+function tokenGuardado(){
+  const n = NUBE();
+  if(!gisToken && n.tok && n.exp && Date.now() < n.exp - 60000){ gisToken = n.tok; gisExp = n.exp; }
+  return gisToken && Date.now() < gisExp - 60000;
+}
+function guardarToken(){
+  if(S.settings.nube && S.settings.nube.tipo === 'drive'){
+    S.settings.nube.tok = gisToken;
+    S.settings.nube.exp = gisExp;
+    save();
+  }
+}
 async function driveToken(interactivo, elegirCuenta){
-  if(gisToken && !elegirCuenta && Date.now() < gisExp - 60000) return gisToken;
+  if(!elegirCuenta && tokenGuardado()) return gisToken;
   if(elegirCuenta){ gisToken = null; gisExp = 0; }
+  /* sin permiso vigente y sin que el usuario lo haya pedido: no abrimos ventanas solos */
+  if(!interactivo && !elegirCuenta) throw new Error('permiso-vencido');
   await cargarGIS();
   const cid = (NUBE().clientId || '').trim();
   if(!cid) throw new Error('falta el ID de cliente');
@@ -2306,13 +2322,15 @@ async function driveToken(interactivo, elegirCuenta){
     let listo = false;
     const cli = google.accounts.oauth2.initTokenClient({
       client_id: cid,
-      scope: 'https://www.googleapis.com/auth/drive.appdata',
+      scope: 'openid email https://www.googleapis.com/auth/drive.appdata',
       prompt: elegirCuenta ? 'select_account consent' : (interactivo ? 'consent' : ''),
       callback: r => {
         listo = true;
         if(r && r.access_token){
           gisToken = r.access_token;
           gisExp = Date.now() + (Number(r.expires_in) || 3600) * 1000;
+          guardarToken();
+          quienSoy();
           ok(gisToken);
         }else err(new Error('sin permiso'));
       },
@@ -2321,6 +2339,14 @@ async function driveToken(interactivo, elegirCuenta){
     cli.requestAccessToken();
     setTimeout(() => { if(!listo) err(new Error('sesión de Google no iniciada')); }, 45000);
   });
+}
+async function quienSoy(){
+  try{
+    const r = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', { headers:{ Authorization:'Bearer ' + gisToken } });
+    if(!r.ok) return;
+    const j = await r.json();
+    if(j && j.email && S.settings.nube){ S.settings.nube.email = j.email; save(); render(); }
+  }catch(e){}
 }
 async function driveBuscar(tok){
   const url = 'https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&fields=files(id,name)&q=' + encodeURIComponent("name='taskflow.json'");
@@ -2440,7 +2466,9 @@ async function sincronizar(silencio){
     if(!silencio) toast('Sincronizado con la nube');
   }catch(e){
     pintarNube('error');
-    if(!silencio) toast(String(e.message) === 'clave' ? 'La clave secreta no coincide' : 'No pude sincronizar: ' + e.message);
+    const m = String(e.message);
+    if(m === 'permiso-vencido'){ if(!silencio) toast('Toca "Reconectar Drive" para renovar el permiso'); }
+    else if(!silencio) toast(m === 'clave' ? 'La clave secreta no coincide' : 'No pude sincronizar: ' + m);
   }finally{ sincronizando = false; }
 }
 function pintarNube(estado){
@@ -2606,7 +2634,12 @@ document.addEventListener('click', e => {
     case 'scan-close':  cerrarCamara(); closeModal(); break;
     case 'nube':        nubeModal(el.dataset.tipo); break;
     case 'sync-now':    sincronizar(); break;
-    case 'drive-cuenta':gisToken = null; gisExp = 0; forzarCuenta = true; toast('Elige la cuenta en la ventana de Google'); sincronizar(); break;
+    case 'drive-cuenta':
+      gisToken = null; gisExp = 0; forzarCuenta = true;
+      if(S.settings.nube){ S.settings.nube.tok = ''; S.settings.nube.exp = 0; S.settings.nube.email = ''; save(); }
+      toast('Elige la cuenta en la ventana de Google');
+      sincronizar();
+      break;
     case 'nube-off':    S.settings.nube = null; gisToken = null; save(); closeModal(); render(); toast('Nube desconectada'); break;
     case 'tg-bruce':    S.settings.bruce = S.settings.bruce === false; save(); render(); toast('Bruce ' + (S.settings.bruce ? 'activo' : 'en silencio')); break;
     case 'tg-sound':    S.settings.sound = S.settings.sound === false; save(); render(); if(S.settings.sound) ladrido('saludo'); toast('Ladridos ' + (S.settings.sound ? 'activados' : 'silenciados')); break;
@@ -2776,7 +2809,8 @@ setInterval(checkReminders, 30000);
   }catch(e){}
 })();
 
-/* nube: al abrir, al volver a la pestaña y cada 3 minutos */
+/* nube: al abrir, al volver a la pestaña y cada 3 minutos.
+   Solo sincroniza si el permiso sigue vigente: nunca abre ventanas por su cuenta. */
 if(nubeLista()) sincronizar(true);
 document.addEventListener('visibilitychange', () => { if(!document.hidden) sincronizar(true); });
 window.addEventListener('online', () => sincronizar(true));
