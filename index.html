@@ -299,6 +299,14 @@ select.pill{padding:5px 10px;outline:none}
 .ico{width:38px;height:38px;border-radius:11px;border:1px solid var(--line);background:var(--panel2);font-size:19px;display:grid;place-items:center;transition:.13s}
 .ico:hover{border-color:var(--accent)}
 .ico.sel{background:var(--accent);border-color:var(--accent)}
+.ico-libre{display:flex;align-items:center;gap:10px;margin-top:10px}
+.ico-prev{width:46px;height:46px;border-radius:14px;background:var(--panel2);border:1px solid var(--line);display:grid;place-items:center;font-size:24px;flex:none}
+.ico-libre input{flex:1;min-width:0}
+/* selector de color visual */
+.colores{display:flex;flex-wrap:wrap;gap:9px}
+.col{width:34px;height:34px;border-radius:50%;border:2px solid transparent;box-shadow:inset 0 0 0 1px rgba(0,0,0,.25);transition:.13s}
+.col:hover{transform:scale(1.1)}
+.col.sel{border-color:var(--text);box-shadow:inset 0 0 0 1px rgba(0,0,0,.25),0 0 0 2px var(--panel)}
 @media(max-width:560px){.week{margin-left:0;width:100%}.day{flex:1}}
 
 /* ---------- summary ---------- */
@@ -460,6 +468,19 @@ select.pill{padding:5px 10px;outline:none}
   .bruce-btn svg{width:38px;height:38px}
   .bruce-panel{left:12px;right:12px;width:auto;bottom:calc(140px + env(safe-area-inset-bottom))}
 }
+/* grabadora de reuniones */
+.grab-top{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.grab-top b{font-size:22px;font-weight:750;font-variant-numeric:tabular-nums;letter-spacing:-.5px}
+.grab-luz{width:12px;height:12px;border-radius:50%;background:var(--low);flex:none}
+.grab-luz.on{background:var(--hi);animation:latir 1.1s ease-in-out infinite}
+@keyframes latir{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.8)}}
+@media(prefers-reduced-motion:reduce){.grab-luz.on{animation:none}}
+.res{margin:0;padding-left:20px;font-size:13.5px;line-height:1.6}
+.res li{margin-bottom:6px}
+.acciones{display:flex;flex-direction:column;gap:6px}
+.acc{display:flex;gap:10px;align-items:flex-start;background:var(--panel2);border:1px solid var(--line);border-radius:11px;padding:9px 11px;font-size:13.2px;cursor:pointer}
+.acc input{margin-top:3px;flex:none;accent-color:var(--accent)}
+
 /* escáner de notas */
 .scan-wrap{background:#000;border-radius:14px;overflow:hidden;aspect-ratio:4/3;display:grid;place-items:center}
 .scan-wrap video{width:100%;height:100%;object-fit:cover;display:block}
@@ -588,7 +609,7 @@ function weekKeys(offset){
 
 /* ---------- estado ---------- */
 const PRIOS = { alta:{label:'Alta', dot:'🔴'}, media:{label:'Media', dot:'🟡'}, baja:{label:'Baja', dot:'⚪'} };
-const COLORS = ['#2563eb','#16a34a','#ef4444','#eab308','#a855f7','#0891b2','#f97316','#64748b'];
+const COLORS = ['#c8f04a','#2563eb','#16a34a','#ef4444','#eab308','#a855f7','#ec4899','#0891b2','#f97316','#14b8a6','#8b5cf6','#64748b'];
 
 /* Arranca vacío: tú creas tus tareas, proyectos, notas y hábitos. */
 function seed(){
@@ -1070,14 +1091,16 @@ function renderNotas(){
   const notes = S.notes.slice().sort((a,b) => (b.createdAt||'').localeCompare(a.createdAt||''));
   return `
   <div class="head-row"><h1>Notas</h1><div class="spacer"></div>
+    ${VozOK ? `<button class="btn" data-act="grabar">${icon('mic')} Grabar reunión</button>` : ''}
     <button class="btn primary" data-act="new-note">+ Nueva nota</button></div>
-  <p class="sub">Tu inbox rápido. Lo que sirva, conviértelo en tarea.</p>
+  <p class="sub">Tu inbox rápido. Graba una reunión y te la resumo, o escribe y conviértelo en tarea.</p>
   ${notes.length ? `<div class="grid">${notes.map(n => `
     <div class="card note">
-      <h4>${esc(n.title || 'Sin título')}</h4>
-      <p>${esc(n.content || '')}</p>
+      <h4>${esc(n.title || 'Sin título')}${n.resumen && n.resumen.length ? ` <span class="chip">${icon('mic')} reunión</span>` : ''}</h4>
+      <p>${esc((n.resumen && n.resumen.length ? n.resumen.join(' · ') : (n.content || '')).slice(0, 260))}</p>
       <div class="foot">
         <time>${esc(fmtStamp(n.createdAt))}</time>
+        ${n.resumen && n.resumen.length ? `<button class="mini" data-act="ver-resumen" data-id="${n.id}">Ver resumen${n.acciones && n.acciones.length ? ' · ' + n.acciones.length + ' acciones' : ''}</button>` : ''}
         <button class="mini" data-act="note2task" data-id="${n.id}">→ Convertir en tarea</button>
         <button class="mini" data-act="edit-note" data-id="${n.id}" aria-label="Editar nota">${icon('edit')}</button>
         <button class="mini" data-act="del-note"  data-id="${n.id}" aria-label="Eliminar nota">${icon('trash')}</button>
@@ -1345,6 +1368,9 @@ function renderPerfil(){
       <select data-act="nudge-every" aria-label="Frecuencia de recordatorio">
         ${[30,60,120,240].map(m => `<option value="${m}" ${Number(S.settings.nudgeEvery)===m?'selected':''}>${m < 60 ? m + ' min' : (m/60) + ' h'}</option>`).join('')}
       </select></div>
+    <button class="rowitem" data-act="notif-on">${icon('bell')} <span>Notificaciones del teléfono</span>
+      <span class="chev">${(window.Notification && Notification.permission === 'granted') ? 'Activadas' : (window.Notification && Notification.permission === 'denied' ? 'Bloqueadas' : 'Activar ›')}</span></button>
+    <button class="rowitem" data-act="ics">${icon('calendar')} <span>Enviar recordatorios a mi calendario</span><span class="chev">›</span></button>
     <button class="rowitem" data-act="test-hola">${icon('user')} <span>Escuchar su saludo (2 ladridos)</span><span class="chev">›</span></button>
     <button class="rowitem" data-act="test-alarm">${icon('zap')} <span>Escuchar su aviso (3 ladridos graves)</span><span class="chev">›</span></button>
   </div>
@@ -1529,9 +1555,9 @@ function projectModal(id){
   const d = p || { name:'', color: COLORS[S.projects.length % COLORS.length] };
   openModal(modalShell(id ? 'Editar proyecto' : 'Nuevo proyecto', `
     <div class="field"><label>Nombre</label><input name="name" required value="${esc(d.name)}" placeholder="Ej: Trabajo"></div>
-    <div class="field"><label>Color</label><select name="color">
-      ${COLORS.map(c => `<option value="${c}" ${d.color===c?'selected':''}>${c}</option>`).join('')}
-    </select></div>`),
+    <div class="field"><label>Color</label>
+      <div class="colores">${COLORS.map(c => `<button type="button" class="col ${d.color===c?'sel':''}" data-act="pick-color" data-c="${c}" style="background:${c}" aria-label="Color ${c}"></button>`).join('')}</div>
+      <input type="hidden" name="color" id="colInput" value="${esc(d.color)}"></div>`),
   (data) => {
     if(!data.name.trim()) return;
     if(p) touch(Object.assign(p, data)); else S.projects.push(touch({ id:uid(), name:data.name, color:data.color }));
@@ -1567,7 +1593,11 @@ function habitModal(id){
   openModal(modalShell(id ? 'Editar hábito' : 'Nuevo hábito', `
     <div class="field"><label>Icono</label>
       <div class="iconos">${ICONOS_HABITO.map(i => `<button type="button" class="ico ${i===d.icon?'sel':''}" data-act="pick-ico" data-i="${i}">${i}</button>`).join('')}</div>
-      <input name="icon" id="icoInput" maxlength="2" value="${esc(d.icon || '🦷')}" style="margin-top:8px" aria-label="Icono del hábito">
+      <div class="ico-libre">
+        <span class="ico-prev" id="icoPrev">${esc(d.icon || '🦷')}</span>
+        <input name="icon" id="icoInput" maxlength="4" value="${esc(d.icon || '🦷')}" aria-label="Icono del hábito"
+               placeholder="o pon el tuyo con el teclado de emojis 😀">
+      </div>
     </div>
     <div class="field"><label>Nombre</label><input name="name" required value="${esc(d.name)}" placeholder="Ej: Cepillarme los dientes"></div>
     <div class="field"><label>Horarios (opcional)</label>
@@ -2302,6 +2332,176 @@ function crearDesdeEscaneo(){
   bruceDice(`Escaneé tu nota y anoté ${n} ${n===1?'tarea':'tareas'}${nom ? ' en ' + nom : ''}. 🐾`, false);
 }
 
+/* =========================================================
+   GRABADORA DE REUNIONES — dicta, transcribe y resume (todo local)
+   ========================================================= */
+let recoNota = null, grabando = false, segmentos = [], parcial = '', t0Grab = 0, relojGrab = null;
+
+const STOP = new Set(('de la que el en y a los del se las por un para con no una su al lo como mas pero sus le ya o este si porque esta entre cuando muy sin sobre tambien me hasta hay donde quien desde todo nos durante todos uno les ni contra otros ese eso ante ellos e esto mi antes algunos otro otras otra tanto esa estos mucho quienes nada muchos cual poco ella estar estas algunas algo nosotros yo tu el ella eso ok bueno entonces osea igual claro').split(' '));
+/* compromisos reales: gatillo + verbo. Evita saludos y cosas ya cerradas. */
+const PAT_ACCION = /\b(hay que|tenemos que|tengo que|debemos|debo|quedamos en|qued[oó] en|me comprometo|se compromete|necesito|necesitamos|voy a|vamos a|favor de|queda pendiente|pendiente de|responsable de)\s+(\w{3,})/i;
+const PAT_CERRADO = /\b(qued[oó] listo|ya est[aá]|ya lo|listo|terminad[oa]|hech[oa]|no hay que|no hace falta)\b/i;
+function esAccion(f){ return PAT_ACCION.test(f) && !PAT_CERRADO.test(f); }
+function recortaAccion(f){
+  const m = f.match(PAT_ACCION);
+  if(!m) return f;
+  const desde = f.toLowerCase().indexOf(m[1].toLowerCase());
+  const txt = (desde > 0 ? f.slice(desde) : f).trim();
+  return txt.charAt(0).toUpperCase() + txt.slice(1);
+}
+
+function limpiaFrase(s){ return String(s).replace(/\s+/g, ' ').trim(); }
+function resumirTexto(frases){
+  const utiles = frases.map(limpiaFrase).filter(s => s.split(' ').length > 3);
+  if(!utiles.length) return { resumen:[], acciones:[] };
+  const frec = {};
+  utiles.forEach(f => {
+    norm(f).replace(/[^a-z0-9ñ ]/g, ' ').split(/\s+/).forEach(w => {
+      if(w.length > 3 && !STOP.has(w)) frec[w] = (frec[w] || 0) + 1;
+    });
+  });
+  const puntaje = utiles.map((f, i) => {
+    const ws = norm(f).replace(/[^a-z0-9ñ ]/g, ' ').split(/\s+/).filter(w => w.length > 3 && !STOP.has(w));
+    const p = ws.reduce((a, w) => a + (frec[w] || 0), 0) / Math.sqrt(ws.length || 1);
+    return { i, f, p: p + (esAccion(f) ? 3 : 0) };
+  });
+  const cuantos = Math.max(2, Math.min(5, Math.ceil(utiles.length / 3)));
+  const top = puntaje.slice().sort((a, b) => b.p - a.p).slice(0, cuantos);
+  const resumen = top.sort((a, b) => a.i - b.i).map(x => x.f);
+  const acciones = utiles.filter(esAccion).map(recortaAccion).slice(0, 8);
+  return { resumen, acciones };
+}
+
+function grabadoraHTML(){
+  const mins = Math.floor((Date.now() - t0Grab) / 60000), segs = Math.floor(((Date.now() - t0Grab) % 60000) / 1000);
+  const txt = segmentos.concat(parcial ? [parcial] : []).join('\n');
+  return `<div class="modal-h"><h3>${grabando ? 'Grabando reunión' : 'Nota de voz'}</h3>
+      <button type="button" class="icon-btn" data-act="grab-cerrar" aria-label="Cerrar">${icon('x')}</button></div>
+    <div class="modal-b">
+      <div class="grab-top">
+        <span class="grab-luz ${grabando ? 'on' : ''}"></span>
+        <b id="grabReloj">${grabando ? pad(mins) + ':' + pad(segs) : '00:00'}</b>
+        <span class="dim" style="font-size:12.5px">${segmentos.length} frases captadas</span>
+      </div>
+      <div class="field"><label>Transcripción (puedes corregirla)</label>
+        <textarea id="grabTexto" style="min-height:150px" ${grabando ? 'readonly' : ''}>${esc(txt)}</textarea></div>
+      ${grabando ? '<p class="hint">Habla normal. Si se corta, se reanuda solo. Al terminar, toca Detener.</p>' : ''}
+    </div>
+    <div class="modal-f">
+      ${grabando
+        ? `<button type="button" class="btn primary" data-act="grab-parar">■ Detener y resumir</button>`
+        : `<button type="button" class="btn" data-act="grab-cerrar">Cancelar</button>
+           <button type="button" class="btn" data-act="grab-iniciar">${icon('mic')} Seguir grabando</button>
+           <button type="button" class="btn primary" data-act="grab-guardar">Resumir y guardar</button>`}
+    </div>`;
+}
+function abrirGrabadora(){
+  if(!VozOK){ toast('Tu navegador no permite dictado'); return; }
+  segmentos = []; parcial = ''; t0Grab = Date.now();
+  openModal(grabadoraHTML());
+  iniciarGrabacion();
+}
+function pintarGrabadora(){
+  const caja = $('#grabTexto');
+  if(caja && grabando){ caja.value = segmentos.concat(parcial ? [parcial] : []).join('\n'); caja.scrollTop = caja.scrollHeight; }
+  const r = $('#grabReloj');
+  if(r && grabando){
+    const d = Date.now() - t0Grab;
+    r.textContent = pad(Math.floor(d / 60000)) + ':' + pad(Math.floor((d % 60000) / 1000));
+  }
+}
+function iniciarGrabacion(){
+  try{
+    const R = window.SpeechRecognition || window.webkitSpeechRecognition;
+    recoNota = new R();
+    recoNota.lang = 'es-CL';
+    recoNota.continuous = true;
+    recoNota.interimResults = true;
+    recoNota.onresult = ev => {
+      parcial = '';
+      for(let i = ev.resultIndex; i < ev.results.length; i++){
+        const txt = ev.results[i][0].transcript.trim();
+        if(!txt) continue;
+        if(ev.results[i].isFinal) segmentos.push(txt); else parcial = txt;
+      }
+      pintarGrabadora();
+    };
+    recoNota.onerror = ev => { if(ev.error === 'not-allowed'){ grabando = false; toast('Falta permiso del micrófono'); openModal(grabadoraHTML()); } };
+    recoNota.onend = () => { if(grabando){ try{ recoNota.start(); }catch(e){} } };
+    recoNota.start();
+    grabando = true;
+    if(!t0Grab) t0Grab = Date.now();
+    clearInterval(relojGrab);
+    relojGrab = setInterval(pintarGrabadora, 1000);
+    openModal(grabadoraHTML());
+  }catch(e){ toast('No pude iniciar el micrófono'); }
+}
+function pararGrabacion(){
+  grabando = false;
+  clearInterval(relojGrab);
+  try{ recoNota && recoNota.stop(); }catch(e){}
+  if(parcial){ segmentos.push(parcial); parcial = ''; }
+  openModal(grabadoraHTML());
+}
+function guardarReunion(){
+  const caja = $('#grabTexto');
+  const texto = caja ? caja.value.trim() : segmentos.join('\n');
+  if(!texto){ toast('No hay nada que guardar'); return; }
+  const frases = texto.split('\n').map(limpiaFrase).filter(Boolean);
+  const { resumen, acciones } = resumirTexto(frases);
+  const n = touch({
+    id:uid(),
+    title:'Reunión ' + shortDate(today()) + ' ' + pad(new Date().getHours()) + ':' + pad(new Date().getMinutes()),
+    content: texto,
+    resumen: resumen,
+    acciones: acciones,
+    createdAt:new Date().toISOString()
+  });
+  S.notes.push(n);
+  save(); closeModal(); goView('notas');
+  toast('Nota guardada con ' + resumen.length + ' puntos y ' + acciones.length + ' acciones');
+  verResumen(n.id);
+}
+function verResumen(id){
+  const n = noteById(id); if(!n) return;
+  const res = (n.resumen && n.resumen.length) ? n.resumen : resumirTexto(String(n.content || '').split('\n')).resumen;
+  const acc = (n.acciones && n.acciones.length) ? n.acciones : resumirTexto(String(n.content || '').split('\n')).acciones;
+  openModal(`<div class="modal-h"><h3>${esc(n.title)}</h3>
+      <button type="button" class="icon-btn" data-act="close" aria-label="Cerrar">${icon('x')}</button></div>
+    <div class="modal-b">
+      <div class="section-title" style="margin-top:0">Resumen</div>
+      ${res.length ? `<ul class="res">${res.map(f => `<li>${esc(f)}</li>`).join('')}</ul>` : '<p class="dim">No alcancé a resumir: muy poco texto.</p>'}
+      <div class="section-title">Acciones detectadas</div>
+      ${acc.length
+        ? `<div class="acciones">${acc.map((f, i) => `<label class="acc"><input type="checkbox" class="accChk" data-i="${i}" checked><span>${esc(f)}</span></label>`).join('')}</div>`
+        : '<p class="dim">Ninguna frase con compromiso claro.</p>'}
+      <details style="margin-top:14px"><summary class="dim" style="cursor:pointer;font-size:13px">Ver transcripción completa</summary>
+        <p class="dim" style="white-space:pre-wrap;font-size:13px;margin-top:8px">${esc(n.content || '')}</p></details>
+    </div>
+    <div class="modal-f">
+      <button type="button" class="btn" data-act="close">Cerrar</button>
+      ${acc.length ? `<button type="button" class="btn primary" data-act="acc-tareas" data-id="${n.id}">Crear tareas marcadas</button>` : ''}
+    </div>`);
+}
+function crearTareasDeNota(id){
+  const marcadas = $$('.accChk').filter(c => c.checked).map(c => c.parentElement.querySelector('span').textContent.trim());
+  if(!marcadas.length){ toast('No marcaste ninguna acción'); return; }
+  const nuevas = [];
+  marcadas.forEach(txt => {
+    const p = parseQuick(txt);
+    const t = touch({
+      id:uid(), title:(p.title || txt).slice(0, 120), date:p.date, time:p.time, projectId:p.projectId,
+      priority:p.priority, status:'pendiente', note:'Desde una reunión', migrated:false, completedAt:'',
+      remind:0, subtasks:[], createdAt:new Date().toISOString()
+    });
+    S.tasks.push(t); nuevas.push(t.id);
+  });
+  save(); closeModal(); goView('hoy');
+  toast(nuevas.length + ' tareas creadas desde la reunión', 'Deshacer', () => {
+    S.tasks = S.tasks.filter(t => nuevas.indexOf(t.id) < 0); save(); render();
+  });
+}
+
 /* ---- vigilancia proactiva ---- */
 let ultimoNudge = Date.now();
 function bruceVigila(){
@@ -2314,6 +2514,7 @@ function bruceVigila(){
     S.settings.lastHabitNudge = today(); save();
     if(hb.length){
       ladrido('aviso');
+      avisar('Repaso de hábitos', 'Te faltan: ' + hb.map(h => h.name).join(', '), 'repaso-' + today());
       bruceDice(`Repaso de hábitos: te faltan ${hb.map(h => h.name).join(', ')}. ¿Los marcamos?`, true);
     }
   }
@@ -2581,10 +2782,7 @@ function disparar(t, tipo){
   const cuando = tipo === 'pre' ? `en ${t.remind} min` : 'ahora';
   const msg = `${t.title} · ${t.time} (${cuando})`;
   ladrido('aviso');
-  try{
-    if(window.Notification && Notification.permission === 'granted')
-      new Notification('Bruce te recuerda', { body:msg });
-  }catch(e){}
+  avisar('⏰ ' + t.title, (tipo === 'pre' ? 'En ' + t.remind + ' min · ' : 'Es la hora · ') + t.time, 'tarea-' + t.id + '-' + tipo);
   bruceDice(`⏰ ${tipo === 'now' ? 'Es la hora' : 'Faltan ' + t.remind + ' min'}: "${t.title}" a las ${t.time}.`, true);
   toast('⏰ ' + msg, 'Ver', () => { ui.day = t.date; goView('agenda'); });
 }
@@ -2615,17 +2813,104 @@ function checkReminders(){
       if(now.getTime() - dt.getTime() > 45 * 60000) return;   /* no avisa por horarios muy pasados */
       notificadas.add(clave);
       ladrido('aviso');
-      try{
-        if(window.Notification && Notification.permission === 'granted')
-          new Notification('Bruce te recuerda', { body:`${h.icon || ''} ${h.name} · ${t}` });
-      }catch(e){}
+      avisar((h.icon || '🔄') + ' ' + h.name, 'Toca a las ' + t + '. ¿Ya lo hiciste?', clave);
       bruceDice(`${h.icon || '🔄'} Toca "${h.name}" (${t}). ¿Ya lo hiciste?`, true);
     });
   });
   bruceVigila();
 }
-function pedirPermisoNotif(){
-  try{ if(window.Notification && Notification.permission === 'default') Notification.requestPermission(); }catch(e){}
+/* ---- notificaciones del sistema ---- */
+function notifOK(){ return !!(window.Notification && Notification.permission === 'granted'); }
+async function pedirPermisoNotif(mostrarAviso){
+  try{
+    if(!window.Notification){ if(mostrarAviso) toast('Este navegador no tiene notificaciones'); return false; }
+    let p = Notification.permission;
+    if(p === 'default') p = await Notification.requestPermission();
+    if(mostrarAviso){
+      if(p === 'granted'){ render(); avisar('Bruce activado 🐾', 'Te avisaré aquí de tus tareas y hábitos.'); }
+      else if(p === 'denied') toast('Bloqueadas: actívalas en los ajustes del navegador');
+    }
+    return p === 'granted';
+  }catch(e){ return false; }
+}
+/* usa el service worker cuando existe: en Android se ven mejor y no dependen de la pestaña */
+async function avisar(titulo, cuerpo, etiqueta){
+  if(!notifOK()) return;
+  const opciones = {
+    body: cuerpo,
+    icon: 'icon-192.png',
+    badge: 'icon-192.png',
+    tag: etiqueta || ('taskflow-' + Date.now()),
+    renotify: true,
+    vibrate: [120, 60, 120],
+    data: { url: location.origin + location.pathname }
+  };
+  try{
+    if('serviceWorker' in navigator){
+      const reg = await navigator.serviceWorker.getRegistration();
+      if(reg && reg.showNotification){ await reg.showNotification(titulo, opciones); return; }
+    }
+    new Notification(titulo, opciones);
+  }catch(e){
+    try{ new Notification(titulo, { body:cuerpo }); }catch(e2){}
+  }
+}
+
+/* ---- exportar recordatorios a Google Calendar / Apple Calendario (.ics) ---- */
+function icsFecha(k, hora){
+  const p = String(hora || '09:00').split(':');
+  return String(k).replace(/-/g, '') + 'T' + pad(Number(p[0]) || 0) + pad(Number(p[1]) || 0) + '00';
+}
+function icsEscape(s){ return String(s || '').replace(/[\\;,]/g, m => '\\' + m).replace(/\n/g, '\\n'); }
+function exportarICS(){
+  const hoy = today(), sello = new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+  const L = ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//TaskFlow//Bruce//ES','CALSCALE:GREGORIAN','METHOD:PUBLISH'];
+  let n = 0;
+
+  S.habits.forEach(h => {
+    const horas = habHoras(h);
+    (horas.length ? horas : []).forEach(t => {
+      n++;
+      L.push('BEGIN:VEVENT',
+        'UID:hab-' + h.id + '-' + t.replace(':','') + '@taskflow',
+        'DTSTAMP:' + sello,
+        'DTSTART:' + icsFecha(hoy, t),
+        'DURATION:PT10M',
+        'RRULE:FREQ=DAILY',
+        'SUMMARY:' + icsEscape((h.icon || '🔄') + ' ' + h.name),
+        'DESCRIPTION:' + icsEscape('Hábito de TaskFlow · Bruce'),
+        'BEGIN:VALARM','TRIGGER:-PT0M','ACTION:DISPLAY',
+        'DESCRIPTION:' + icsEscape(h.name),
+        'END:VALARM','END:VEVENT');
+    });
+  });
+
+  S.tasks.filter(t => !isDone(t) && t.date && t.date >= hoy && t.time).forEach(t => {
+    n++;
+    const p = projById(t.projectId);
+    L.push('BEGIN:VEVENT',
+      'UID:task-' + t.id + '@taskflow',
+      'DTSTAMP:' + sello,
+      'DTSTART:' + icsFecha(t.date, t.time),
+      'DURATION:PT30M',
+      'SUMMARY:' + icsEscape(t.title + (p ? ' · ' + p.name : '')),
+      'DESCRIPTION:' + icsEscape((t.note || '') + '\nTarea de TaskFlow · Bruce'),
+      'BEGIN:VALARM','TRIGGER:-PT' + (Number(t.remind) || 10) + 'M','ACTION:DISPLAY',
+      'DESCRIPTION:' + icsEscape(t.title),
+      'END:VALARM','END:VEVENT');
+  });
+
+  if(!n){ toast('No hay hábitos con horario ni tareas con hora'); return; }
+  L.push('END:VCALENDAR');
+  try{
+    const blob = new Blob([L.join('\r\n')], { type:'text/calendar;charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'taskflow-recordatorios.ics';
+    document.body.appendChild(a); a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+    toast(n + ' recordatorios listos para tu calendario');
+  }catch(e){ toast('No pude generar el archivo'); }
 }
 
 function goView(v){
@@ -2698,6 +2983,15 @@ document.addEventListener('click', e => {
     case 'tg-sound':    S.settings.sound = S.settings.sound === false; save(); render(); if(S.settings.sound) ladrido('saludo'); toast('Ladridos ' + (S.settings.sound ? 'activados' : 'silenciados')); break;
     case 'test-alarm':  unlockAudio(); ladrido('aviso'); pedirPermisoNotif(); toast('Así te avisa Bruce'); break;
     case 'test-hola':   unlockAudio(); ladrido('saludo'); toast('¡Guau!'); break;
+    case 'notif-on':    pedirPermisoNotif(true); break;
+    case 'grabar':      abrirGrabadora(); break;
+    case 'grab-parar':  pararGrabacion(); break;
+    case 'grab-iniciar':iniciarGrabacion(); break;
+    case 'grab-guardar':guardarReunion(); break;
+    case 'grab-cerrar': grabando = false; clearInterval(relojGrab); try{ recoNota && recoNota.stop(); }catch(e){} closeModal(); break;
+    case 'ver-resumen': verResumen(id); break;
+    case 'acc-tareas':  crearTareasDeNota(id); break;
+    case 'ics':         exportarICS(); break;
     case 'edit-task':   taskModal(id); break;
     case 'del-task':    delTask(id); break;
     case 'date-task':   dateModal(id); break;
@@ -2728,7 +3022,13 @@ document.addEventListener('click', e => {
     case 'habit-hora':  marcarHabito(id, el.dataset.k, el.dataset.h); break;
     case 'pick-ico': {
       const inp = $('#icoInput'); if(inp) inp.value = el.dataset.i;
+      const pv = $('#icoPrev'); if(pv) pv.textContent = el.dataset.i;
       $$('.ico').forEach(b => b.classList.toggle('sel', b === el));
+      break;
+    }
+    case 'pick-color': {
+      const inp = $('#colInput'); if(inp) inp.value = el.dataset.c;
+      $$('.col').forEach(b => b.classList.toggle('sel', b === el));
       break;
     }
   }

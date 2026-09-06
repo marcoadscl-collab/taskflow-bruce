@@ -1,6 +1,6 @@
 /* TaskFlow · Bruce — service worker
    Guarda la app para abrirla sin conexión y que se instale como aplicación. */
-const CACHE = 'taskflow-v3';
+const CACHE = 'taskflow-v4';
 const ARCHIVOS = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {
@@ -13,6 +13,18 @@ self.addEventListener('activate', e => {
     caches.keys()
       .then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k))))
       .then(() => self.clients.claim())
+  );
+});
+
+/* al tocar una notificación, abre o enfoca la app */
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
+  const destino = (e.notification.data && e.notification.data.url) || './';
+  e.waitUntil(
+    self.clients.matchAll({ type:'window', includeUncontrolled:true }).then(lista => {
+      for(const c of lista){ if('focus' in c) return c.focus(); }
+      if(self.clients.openWindow) return self.clients.openWindow(destino);
+    })
   );
 });
 
