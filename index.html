@@ -2477,7 +2477,7 @@ function pintarNube(estado){
 function syncPronto(){
   if(!nubeLista()) return;
   clearTimeout(tSync);
-  tSync = setTimeout(() => sincronizar(true), 6000);
+  tSync = setTimeout(() => sincronizar(true), 3000);
 }
 function nubeModal(tipo){
   const n = NUBE();
@@ -2813,8 +2813,9 @@ setInterval(checkReminders, 30000);
    Solo sincroniza si el permiso sigue vigente: nunca abre ventanas por su cuenta. */
 if(nubeLista()) sincronizar(true);
 document.addEventListener('visibilitychange', () => { if(!document.hidden) sincronizar(true); });
+window.addEventListener('focus', () => sincronizar(true));
 window.addEventListener('online', () => sincronizar(true));
-setInterval(() => sincronizar(true), 180000);
+setInterval(() => sincronizar(true), 60000);
 
 /* instalable como app (service worker) */
 if('serviceWorker' in navigator && location.protocol.startsWith('http')){
