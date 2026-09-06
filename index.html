@@ -10,6 +10,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="TaskFlow">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-192.png">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%230a0c08'/%3E%3Cpath d='M33 22c-11 2-19 12-20 24-1 10 4 17 10 17 6 0 10-7 12-17 2-9 1-17-2-24z' fill='%2315160f' stroke='%233b422f' stroke-width='2'/%3E%3Cpath d='M67 22c11 2 19 12 20 24 1 10-4 17-10 17-6 0-10-7-12-17-2-9-1-17 2-24z' fill='%2315160f' stroke='%233b422f' stroke-width='2'/%3E%3Cpath d='M50 18c18 0 28 12 28 29 0 11-3 21-8 27-5 6-11 8-20 8s-15-2-20-8c-5-6-8-16-8-27 0-17 10-29 28-29z' fill='%231f2119' stroke='%233b422f' stroke-width='2'/%3E%3Cpath d='M50 19c6 6 9 15 8 27H42c-1-12 2-21 8-27z' fill='%23f2f4e9'/%3E%3Cellipse cx='50' cy='70' rx='16' ry='12' fill='%23f2f4e9'/%3E%3Cpath d='M50 68c-4 0-7-2-7-4s3-3 7-3 7 1 7 3-3 4-7 4z' fill='%2315160f'/%3E%3Crect x='23' y='40' width='23' height='15' rx='7' fill='%23c8f04a' stroke='%230e0f0a' stroke-width='2.5'/%3E%3Crect x='54' y='40' width='23' height='15' rx='7' fill='%23c8f04a' stroke='%230e0f0a' stroke-width='2.5'/%3E%3Cpath d='M46 47.5h8' stroke='%230e0f0a' stroke-width='3.4' stroke-linecap='round'/%3E%3C/svg%3E">
 <style>
 :root{
@@ -261,6 +263,42 @@ select.pill{padding:5px 10px;outline:none}
 .day.on{background:var(--ok);border-color:var(--ok);color:var(--on-accent);font-weight:700}
 .day.today{box-shadow:0 0 0 2px var(--accent)}
 .score{font-size:12.5px;color:var(--muted);min-width:52px;text-align:right}
+/* tarjetas de hábito con horarios */
+.hcard{display:flex;align-items:center;gap:14px;padding:14px 16px;margin-bottom:10px}
+.hcard.ok{border-color:var(--accent)}
+.hicon{width:44px;height:44px;border-radius:14px;background:var(--panel2);border:1px solid var(--line);display:grid;place-items:center;font-size:21px;flex:none}
+.hicon.sm{width:26px;height:26px;border-radius:8px;font-size:14px;display:inline-grid;vertical-align:-8px;margin-right:8px}
+.hcard.ok .hicon{background:var(--accent);border-color:var(--accent)}
+.hname{font-weight:600;font-size:15px}
+.hhoras{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.hh{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:var(--muted);background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:4px 11px;transition:.13s}
+.hh .svgic{width:13px;height:13px;color:var(--low)}
+.hh:hover{border-color:var(--accent)}
+.hh.on{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.hh.on .svgic{color:var(--on-accent)}
+.hscore{text-align:right;font-size:11px;color:var(--muted);flex:none}
+.hscore b{display:block;font-size:16px;color:var(--text)}
+/* tablero semanal */
+.tablero{width:100%;border-collapse:collapse;font-size:13px}
+.tablero th,.tablero td{padding:7px 5px;text-align:center}
+.tablero thead th{font-size:10px;color:var(--muted);font-weight:700;letter-spacing:.4px}
+.tablero thead th b{display:block;font-size:13px;color:var(--text);font-weight:700}
+.tablero thead th.hoy b{color:var(--accent-ink)}
+.tablero tbody th{text-align:left;font-weight:600;white-space:nowrap;padding-right:12px;font-size:13.5px}
+.tablero tbody tr+tr th,.tablero tbody tr+tr td{border-top:1px solid var(--line)}
+.celda{width:34px;height:34px;border-radius:10px;border:1.5px solid var(--line);background:var(--panel2);display:grid;place-items:center;font-size:11px;font-weight:700;color:var(--muted);transition:.13s;margin:0 auto}
+.celda:hover{border-color:var(--accent)}
+.celda .svgic{width:16px;height:16px;color:var(--on-accent)}
+.celda.on{background:var(--accent);border-color:var(--accent)}
+.celda.medio{border-color:var(--accent);color:var(--accent-ink)}
+.celda.hoy{box-shadow:0 0 0 2px var(--accent-soft)}
+.racha{font-size:14px;font-weight:700;color:var(--accent-ink)}
+.racha span{font-size:10px;color:var(--muted);margin-left:1px}
+/* selector de iconos */
+.iconos{display:flex;flex-wrap:wrap;gap:6px}
+.ico{width:38px;height:38px;border-radius:11px;border:1px solid var(--line);background:var(--panel2);font-size:19px;display:grid;place-items:center;transition:.13s}
+.ico:hover{border-color:var(--accent)}
+.ico.sel{background:var(--accent);border-color:var(--accent)}
 @media(max-width:560px){.week{margin-left:0;width:100%}.day{flex:1}}
 
 /* ---------- summary ---------- */
@@ -408,6 +446,16 @@ select.pill{padding:5px 10px;outline:none}
   .bruce-btn svg{width:38px;height:38px}
   .bruce-panel{left:12px;right:12px;width:auto;bottom:calc(140px + env(safe-area-inset-bottom))}
 }
+/* escáner de notas */
+.scan-wrap{background:#000;border-radius:14px;overflow:hidden;aspect-ratio:4/3;display:grid;place-items:center}
+.scan-wrap video{width:100%;height:100%;object-fit:cover;display:block}
+.scan-off{text-align:center;padding:24px;color:var(--muted)}
+.scan-off .svgic{color:var(--accent)}
+.scan-prev{width:100%;max-height:150px;object-fit:cover;border-radius:12px;margin-bottom:12px;border:1px solid var(--line)}
+.spin{width:34px;height:34px;border-radius:50%;border:3px solid var(--line);border-top-color:var(--accent);margin:0 auto;animation:giro .9s linear infinite}
+@keyframes giro{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.spin{animation-duration:3s}}
+
 /* interruptores de ajustes */
 .switch{margin-left:auto;width:44px;height:25px;border-radius:999px;background:var(--line);position:relative;transition:.16s;flex:none}
 .switch::after{content:'';position:absolute;top:3px;left:3px;width:19px;height:19px;border-radius:50%;background:var(--panel);transition:.16s}
@@ -475,6 +523,7 @@ select.pill{padding:5px 10px;outline:none}
     <button class="pill" data-act="bruce-ask" data-q="hábitos">Hábitos</button>
     <button class="pill" data-act="bruce-ask" data-q="atrasadas">Atrasadas</button>
     <button class="pill" data-act="bruce-ask" data-q="semana">Semana</button>
+    <button class="pill" data-act="scan" id="bruceScan">Escanear nota</button>
   </div>
   <form class="bruce-ask" data-act="bruce-form">
     <button type="button" class="mic" data-act="mic" data-destino="bruce" aria-label="Dictar por voz" title="Dictar por voz"></button>
@@ -558,7 +607,10 @@ function load(){
   return s;
 }
 let S = load();
-function save(){ try{ localStorage.setItem(LS_KEY, JSON.stringify(S)); }catch(e){ toast('No se pudo guardar 😕'); } }
+function save(){
+  try{ localStorage.setItem(LS_KEY, JSON.stringify(S)); }catch(e){ toast('No se pudo guardar 😕'); }
+  if(typeof syncPronto === 'function') syncPronto();
+}
 
 /* marca de tiempo por elemento: permite combinar copias entre dispositivos */
 function touch(o){ if(o) o.mtime = Date.now(); return o; }
@@ -651,7 +703,9 @@ const ICONS = {
   right:'<path d="M9 5l7 7-7 7"/>',
   x:'<path d="M6 6l12 12M18 6 6 18"/>',
   save:'<path d="M5 4h11l3 3v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z"/><path d="M8 4v5h7M8 15h8"/>',
-  mic:'<rect x="9" y="2.5" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18.5V22M9 22h6"/>'
+  mic:'<rect x="9" y="2.5" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18.5V22M9 22h6"/>',
+  camera:'<path d="M3 8a2 2 0 0 1 2-2h2.5l1.5-2h6l1.5 2H19a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><circle cx="12" cy="13" r="4"/>',
+  cloud:'<path d="M7 18a4 4 0 0 1 .5-8 6 6 0 0 1 11.5 2 3.5 3.5 0 0 1-.5 6z"/>'
 };
 function icon(name, size){
   const s = size ? ` style="width:${size}px;height:${size}px"` : '';
@@ -810,7 +864,7 @@ function renderHoy(){
       <p class="dim" style="margin:5px 0 0;font-size:13px">${comp} de ${all.length} tareas completadas${late.length ? ' · ' + late.length + ' atrasadas' : ''}</p>
       <div class="prog-row" style="margin-top:10px">
         ${FOCUS.size ? '<span class="badge-live">FOCO 3</span>' : ''}
-        ${S.habits.length ? `<span class="chip">${icon('repeat')} ${S.habits.filter(h => h.log && h.log[d0]).length}/${S.habits.length} hábitos hoy</span>` : ''}
+        ${S.habits.length ? `<span class="chip">${icon('repeat')} ${S.habits.filter(h => habListo(h, d0)).length}/${S.habits.length} hábitos hoy</span>` : ''}
       </div>
     </div>
   </div>
@@ -819,6 +873,7 @@ function renderHoy(){
     <span class="plus">${icon('plus', 20)}</span>
     <input id="captureInput" placeholder="¿Qué necesitas hacer?" autocomplete="off" aria-label="Captura rápida de tarea">
     ${VozOK ? `<button type="button" class="mic" data-act="mic" data-destino="captura" aria-label="Dictar tarea por voz" title="Dictar tarea">${icon('mic')}</button>` : ''}
+    <button type="button" class="mic" data-act="scan" aria-label="Escanear una nota con la cámara" title="Escanear nota">${icon('camera')}</button>
   </form>
   <p class="hint">${VozOK ? 'Dicta con el micrófono o escríbelo natural' : 'Escríbelo natural'}: <b>mañana</b> · <b>viernes</b> · <b>9:30</b> · <b>!alta</b>${S.projects.length ? ` · <b>#${esc(S.projects[0].name.replace(/\s/g,''))}</b>` : ''}</p>
 
@@ -985,28 +1040,104 @@ function fmtStamp(iso){
   return d.getDate() + ' ' + MESES[d.getMonth()].slice(0,3) + ' ' + d.getFullYear();
 }
 
+/* ---------- hábitos con horarios ---------- */
+function habHoras(h){ return Array.isArray(h.times) && h.times.length ? h.times : []; }
+function habTotal(h){ return Math.max(1, habHoras(h).length); }
+function habHechos(h, k){
+  const v = h.log && h.log[k];
+  if(!v) return 0;
+  if(v === true) return habTotal(h);              /* formato antiguo */
+  return habHoras(h).filter(t => v[t]).length || (v.__ ? 1 : 0);
+}
+function habListo(h, k){ return habHechos(h, k) >= habTotal(h); }
+function habRacha(h){
+  let n = 0, d = new Date();
+  while(n < 400){
+    const k = key(d);
+    if(habListo(h, k)) n++;
+    else if(k !== today()) break;                 /* hoy sin marcar no corta la racha */
+    else { d = addDays(d, -1); continue; }
+    d = addDays(d, -1);
+  }
+  return n;
+}
+function marcarHabito(id, k, hora){
+  const h = habitById(id); if(!h) return;
+  h.log = h.log || {};
+  let v = h.log[k];
+  if(v === true){ v = {}; habHoras(h).forEach(t => v[t] = true); if(!habHoras(h).length) v.__ = true; }
+  if(!v || typeof v !== 'object') v = {};
+  if(hora){
+    if(v[hora]) delete v[hora]; else v[hora] = true;
+  }else if(habHoras(h).length){
+    const todo = habListo(h, k);
+    v = {}; if(!todo) habHoras(h).forEach(t => v[t] = true);
+  }else{
+    v = v.__ ? {} : { __:true };
+  }
+  if(Object.keys(v).length) h.log[k] = v; else delete h.log[k];
+  touch(h); save(); render();
+}
 function renderHabitos(){
   const wk = weekKeys(0), d0 = today();
+  const hoyPend = S.habits.filter(h => !habListo(h, d0)).length;
+
+  const tarjetaHoy = h => {
+    const horas = habHoras(h), hechos = habHechos(h, d0), total = habTotal(h);
+    return `<div class="card hcard ${habListo(h,d0)?'ok':''}">
+      <div class="hicon">${esc(h.icon || '🔄')}</div>
+      <div style="flex:1;min-width:0">
+        <div class="hname">${esc(h.name)}</div>
+        <div class="hhoras">
+          ${horas.length
+            ? horas.map(t => `<button class="hh ${(h.log&&h.log[d0]&&h.log[d0]!==true&&h.log[d0][t])||h.log&&h.log[d0]===true?'on':''}"
+                data-act="habit-hora" data-id="${h.id}" data-k="${d0}" data-h="${t}"
+                aria-label="Marcar ${esc(h.name)} de las ${t}">${icon('check')} ${t}</button>`).join('')
+            : `<button class="hh ${habListo(h,d0)?'on':''}" data-act="habit-day" data-id="${h.id}" data-k="${d0}">${icon('check')} Marcar hoy</button>`}
+        </div>
+      </div>
+      <div class="hscore"><b>${hechos}/${total}</b><span>hoy</span></div>
+      <div class="actions" style="opacity:1">
+        <button data-act="edit-habit" data-id="${h.id}" aria-label="Editar ${esc(h.name)}">${icon('edit')}</button>
+        <button data-act="del-habit"  data-id="${h.id}" aria-label="Eliminar ${esc(h.name)}">${icon('trash')}</button>
+      </div>
+    </div>`;
+  };
+
+  const fila = h => `<tr>
+      <th scope="row"><span class="hicon sm">${esc(h.icon || '🔄')}</span><span>${esc(h.name)}</span></th>
+      ${wk.map(k => {
+        const hechos = habHechos(h, k), total = habTotal(h), estado = hechos >= total ? 'on' : (hechos ? 'medio' : '');
+        return `<td><button class="celda ${estado} ${k===d0?'hoy':''}" data-act="habit-day" data-id="${h.id}" data-k="${k}"
+          aria-label="${esc(h.name)}, ${esc(longDate(k))}: ${hechos} de ${total}">
+          ${hechos >= total ? icon('check') : (hechos ? hechos + '/' + total : '')}</button></td>`;
+      }).join('')}
+      <td class="racha">${habRacha(h)}<span>d</span></td>
+    </tr>`;
+
   return `
   <div class="head-row"><h1>Hábitos</h1><div class="spacer"></div>
     <button class="btn primary" data-act="new-habit">+ Nuevo hábito</button></div>
-  <p class="sub cap">Semana del ${longDate(wk[0])}</p>
-  <div style="margin-top:20px">
-  ${S.habits.length ? S.habits.map(h => {
-    const n = wk.filter(k => h.log && h.log[k]).length;
-    return `<div class="card habit">
-      <div class="name">${esc(h.icon || '🔄')} ${esc(h.name)}</div>
-      <div class="week">${wk.map((k,i) => `
-        <button class="day ${h.log && h.log[k] ? 'on':''} ${k===d0?'today':''}" data-act="habit-day" data-id="${h.id}" data-k="${k}" title="${esc(longDate(k))}">
-          <span>${DIAS_C[i]}</span><b>${fromKey(k).getDate()}</b>
-        </button>`).join('')}</div>
-      <div class="score">${n} / 7</div>
-      <div class="actions" style="opacity:1">
-        <button data-act="edit-habit" data-id="${h.id}" aria-label="Editar hábito ${esc(h.name)}"   title="Editar">${icon('edit')}</button>
-        <button data-act="del-habit"  data-id="${h.id}" aria-label="Eliminar hábito ${esc(h.name)}" title="Eliminar">${icon('trash')}</button>
-      </div>
-    </div>`; }).join('') : '<div class="empty">Sin hábitos aún.</div>'}
-  </div>`;
+  <p class="sub">${S.habits.length ? (hoyPend ? `Te faltan ${hoyPend} de ${S.habits.length} hoy.` : 'Todos los de hoy están marcados.') : 'Crea el primero y ponle horarios.'}</p>
+
+  ${S.habits.length ? `
+    <div class="section-title">Hoy</div>
+    ${S.habits.map(tarjetaHoy).join('')}
+
+    <div class="section-title">Tablero de la semana</div>
+    <div class="card" style="overflow-x:auto">
+      <table class="tablero">
+        <thead><tr><th></th>${wk.map((k,i) => `<th class="${k===d0?'hoy':''}"><span>${DIAS_C[i]}</span><b>${fromKey(k).getDate()}</b></th>`).join('')}<th>racha</th></tr></thead>
+        <tbody>${S.habits.map(fila).join('')}</tbody>
+      </table>
+    </div>
+    <p class="hint">Toca una celda para marcar el día completo; en la tarjeta de arriba marcas cada horario por separado.</p>
+  ` : `<div class="card empty-day">
+      <div>${icon('repeat', 32)}</div>
+      <h2 style="margin-top:8px">Sin hábitos aún</h2>
+      <p class="dim">Ejemplo: <b>Cepillarme los dientes</b> a las 09:00, 12:00 y 21:00.</p>
+      <div style="margin-top:14px"><button class="btn primary sm" data-act="new-habit">+ Crear hábito</button></div>
+    </div>`}`;
 }
 
 function renderResumen(){
@@ -1166,6 +1297,17 @@ function renderPerfil(){
     <button class="rowitem" data-act="test-hola">${icon('user')} <span>Escuchar su saludo (2 ladridos)</span><span class="chev">›</span></button>
     <button class="rowitem" data-act="test-alarm">${icon('zap')} <span>Escuchar su aviso (3 ladridos graves)</span><span class="chev">›</span></button>
   </div>
+
+  <div class="section-title">Nube · sincronizar PC y teléfono</div>
+  <div class="card" style="padding:0;overflow:hidden">
+    ${NUBE().tipo
+      ? `<button class="rowitem" data-act="nube">${icon('cloud')} <span>Conectado a ${nubeNombre()}</span><span class="chev">Editar</span></button>
+         <button class="rowitem" data-act="sync-now" data-nube="ok">${icon('repeat')} <span>Sincronizar ahora</span>
+           <span class="chev">${S.settings.nube.last ? new Date(S.settings.nube.last).toLocaleString('es-CL',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}) : 'nunca'}</span></button>`
+      : `<button class="rowitem" data-act="nube" data-tipo="drive">${icon('cloud')} <span>Guardar en mi Google Drive</span><span class="chev">›</span></button>
+         <button class="rowitem" data-act="nube" data-tipo="supabase">${icon('cloud')} <span>Guardar en Supabase (cifrado)</span><span class="chev">›</span></button>`}
+  </div>
+  ${NUBE().tipo ? '' : '<p class="hint" style="margin-top:10px">Sin nube, cada dispositivo guarda lo suyo. Con nube, tu celular y tu PC se ponen al día solos.</p>'}
 
   <div class="section-title">Datos</div>
   <div class="card" style="padding:0;overflow:hidden">
@@ -1356,18 +1498,34 @@ function noteModal(id){
     save(); closeModal(); render(); toast(n ? 'Nota actualizada' : 'Nota creada');
   });
 }
+const ICONOS_HABITO = ['🦷','💧','🏃','📚','🧘','💊','🥗','😴','🚭','🧹','💪','☀️','📝','🎸','🐕','🧴'];
+function normalizaHoras(txt){
+  return String(txt || '').split(/[,;\s]+/).map(s => {
+    const m = s.match(/^(\d{1,2})[:.]?(\d{2})?$/);
+    if(!m) return null;
+    const hh = Math.min(23, Number(m[1])), mm = Math.min(59, Number(m[2] || 0));
+    return pad(hh) + ':' + pad(mm);
+  }).filter(Boolean).filter((v, i, a) => a.indexOf(v) === i).sort();
+}
 function habitModal(id){
   const h = id ? habitById(id) : null;
-  const d = h || { icon:'🔄', name:'' };
+  const d = h || { icon:'🦷', name:'', times:[] };
   openModal(modalShell(id ? 'Editar hábito' : 'Nuevo hábito', `
-    <div class="row2">
-      <div class="field"><label>Icono</label><input name="icon" maxlength="2" value="${esc(d.icon)}" placeholder="💧"></div>
-      <div class="field"><label>Nombre</label><input name="name" required value="${esc(d.name)}" placeholder="Tomar agua"></div>
-    </div>`),
+    <div class="field"><label>Icono</label>
+      <div class="iconos">${ICONOS_HABITO.map(i => `<button type="button" class="ico ${i===d.icon?'sel':''}" data-act="pick-ico" data-i="${i}">${i}</button>`).join('')}</div>
+      <input name="icon" id="icoInput" maxlength="2" value="${esc(d.icon || '🦷')}" style="margin-top:8px" aria-label="Icono del hábito">
+    </div>
+    <div class="field"><label>Nombre</label><input name="name" required value="${esc(d.name)}" placeholder="Ej: Cepillarme los dientes"></div>
+    <div class="field"><label>Horarios (opcional)</label>
+      <input name="times" value="${esc(habHoras(d).join(', '))}" placeholder="09:00, 12:00, 21:00">
+      <p class="hint" style="margin-top:6px">Sepáralos con coma. Cada horario se marca por separado y Bruce te avisa a esa hora.</p>
+    </div>`,
+    id ? `<button type="button" class="btn danger left" data-act="del-habit" data-id="${id}">Eliminar</button>` : ''),
   (data) => {
     if(!data.name.trim()) return;
-    if(h) touch(Object.assign(h, { icon:data.icon || '🔄', name:data.name }));
-    else S.habits.push(touch({ id:uid(), icon:data.icon || '🔄', name:data.name, log:{} }));
+    const times = normalizaHoras(data.times);
+    if(h) touch(Object.assign(h, { icon:data.icon || '🔄', name:data.name, times }));
+    else S.habits.push(touch({ id:uid(), icon:data.icon || '🔄', name:data.name, times, log:{} }));
     save(); closeModal(); render(); toast(h ? 'Hábito actualizado' : 'Hábito creado');
   });
 }
@@ -1796,7 +1954,7 @@ function saludo(){
   const h = new Date().getHours();
   return h < 12 ? 'Buenos días' : (h < 20 ? 'Buenas tardes' : 'Buenas noches');
 }
-function habitosPendientes(){ const d = today(); return S.habits.filter(h => !(h.log && h.log[d])); }
+function habitosPendientes(){ const d = today(); return S.habits.filter(h => !habListo(h, d)); }
 function tareasHoy(){ return S.tasks.filter(t => t.date === today()); }
 function atrasadas(){ return S.tasks.filter(t => !isDone(t) && t.date && t.date < today()).sort(byDate); }
 function proxima(){
@@ -1833,7 +1991,11 @@ function bruceResponde(qRaw){
   if(/(habito|habitos)/.test(q)){
     if(!S.habits.length) return 'Aún no tienes hábitos. Créalos en la sección Hábitos.';
     const hb = habitosPendientes(), wk = weekKeys(0);
-    const detalle = S.habits.map(h => `· ${h.name}: ${wk.filter(k => h.log && h.log[k]).length}/7 esta semana`).join('\n');
+    const detalle = S.habits.map(h => {
+      const dias = wk.filter(k => habListo(h, k)).length;
+      const horas = habHoras(h).length ? ' · ' + habHoras(h).join(' ') : '';
+      return `· ${h.icon || ''} ${h.name}: ${dias}/7 esta semana${horas}`;
+    }).join('\n');
     return (hb.length ? `Te faltan hoy: ${hb.map(h => h.name).join(', ')}.\n` : 'Hoy los marcaste todos. 🐾\n') + detalle;
   }
   if(/(atrasad|vencid|retras)/.test(q)){
@@ -1959,6 +2121,131 @@ function dictar(destino){
   }catch(e){ toast('No pude iniciar el micrófono'); escuchando = false; pintarMic(false); }
 }
 
+/* ---- escanear una nota con la cámara y convertirla en tareas ---- */
+let camStream = null;
+function cerrarCamara(){
+  if(camStream){ try{ camStream.getTracks().forEach(t => t.stop()); }catch(e){} camStream = null; }
+}
+function abrirEscaner(){
+  openModal(`<div class="modal-h"><h3>Escanear nota</h3>
+      <button type="button" class="icon-btn" data-act="scan-close" aria-label="Cerrar">${icon('x')}</button></div>
+    <div class="modal-b" id="scanBody">
+      <div class="scan-wrap"><video id="scanVideo" playsinline autoplay muted></video></div>
+      <p class="hint" style="margin-top:10px">Enfoca la nota escrita a mano o impresa. También puedes elegir una foto de tu galería.</p>
+    </div>
+    <div class="modal-f">
+      <label class="btn left" style="cursor:pointer">${icon('folder')} Elegir foto
+        <input type="file" accept="image/*" id="scanFile" style="display:none"></label>
+      <button type="button" class="btn" data-act="scan-close">Cancelar</button>
+      <button type="button" class="btn primary" data-act="scan-shot">${icon('camera')} Tomar foto</button>
+    </div>`);
+  iniciarCamara();
+}
+async function iniciarCamara(){
+  const v = $('#scanVideo'); if(!v) return;
+  try{
+    camStream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:{ ideal:'environment' } }, audio:false });
+    v.srcObject = camStream;
+  }catch(e){
+    const w = $('.scan-wrap');
+    if(w) w.innerHTML = `<div class="scan-off">${icon('camera', 30)}<p class="dim" style="margin:10px 0 0;font-size:13px">No pude abrir la cámara.<br>Usa <b>Elegir foto</b> para tomar una imagen.</p></div>`;
+  }
+}
+function capturarFoto(){
+  const v = $('#scanVideo');
+  if(!v || !v.videoWidth){ toast('La cámara aún no está lista'); return; }
+  const c = document.createElement('canvas');
+  const escala = Math.min(1, 1600 / v.videoWidth);
+  c.width = v.videoWidth * escala; c.height = v.videoHeight * escala;
+  c.getContext('2d').drawImage(v, 0, 0, c.width, c.height);
+  cerrarCamara();
+  leerTexto(c.toDataURL('image/jpeg', 0.9));
+}
+function fotoDesdeArchivo(file){
+  const r = new FileReader();
+  r.onload = () => { cerrarCamara(); leerTexto(r.result); };
+  r.readAsDataURL(file);
+}
+function cargarOCR(){
+  if(window.Tesseract) return Promise.resolve();
+  return new Promise((ok, err) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.1.1/tesseract.min.js';
+    s.onload = ok; s.onerror = err;
+    document.head.appendChild(s);
+  });
+}
+async function leerTexto(img){
+  const cuerpo = $('#scanBody');
+  if(cuerpo) cuerpo.innerHTML = `<div style="text-align:center;padding:26px 10px">
+      <div class="spin"></div><p class="dim" id="ocrMsg" style="margin-top:14px;font-size:13px">Leyendo la nota…</p></div>`;
+  const pie = $('.modal-f'); if(pie) pie.innerHTML = '';
+  try{
+    await cargarOCR();
+    const r = await Tesseract.recognize(img, 'spa', {
+      logger: m => {
+        const e = $('#ocrMsg');
+        if(e && m.status === 'recognizing text') e.textContent = 'Leyendo la nota… ' + Math.round((m.progress || 0) * 100) + '%';
+        else if(e && m.status) e.textContent = 'Preparando el lector…';
+      }
+    });
+    revisarEscaneo(((r.data && r.data.text) || '').trim(), img, false);
+  }catch(e){
+    revisarEscaneo('', img, true);
+  }
+}
+function revisarEscaneo(texto, img, fallo){
+  const lineas = texto.split('\n').map(s => s.trim()).filter(s => s.length > 2);
+  openModal(`<div class="modal-h"><h3>${fallo ? 'Escribe lo que dice' : 'Revisa lo que leí'}</h3>
+      <button type="button" class="icon-btn" data-act="scan-close" aria-label="Cerrar">${icon('x')}</button></div>
+    <div class="modal-b">
+      <img class="scan-prev" src="${img}" alt="Foto de la nota">
+      ${fallo ? '<p class="hint" style="margin:0 0 10px">No pude leer el texto automáticamente (sin conexión o el lector no cargó). Escríbelo tú y lo convierto en tareas.</p>' : ''}
+      <div class="field"><label>Texto ${fallo ? '' : 'detectado'} · una tarea por línea</label>
+        <textarea id="scanText" style="min-height:120px">${esc(lineas.join('\n'))}</textarea></div>
+      <div class="row2">
+        <div class="field"><label>¿En qué proyecto va?</label><select id="scanProj">${projOptions(ui.project || '')}</select></div>
+        <div class="field"><label>Prioridad</label><select id="scanPrio">
+          ${Object.keys(PRIOS).map(k => `<option value="${k}" ${k==='media'?'selected':''}>${PRIOS[k].dot} ${PRIOS[k].label}</option>`).join('')}
+        </select></div>
+      </div>
+      <div class="field"><label>Fecha</label><input type="date" id="scanDate" value="${today()}"></div>
+    </div>
+    <div class="modal-f">
+      <button type="button" class="btn" data-act="scan-close">Cancelar</button>
+      <button type="button" class="btn primary" data-act="scan-create">Crear tareas</button>
+    </div>`);
+}
+function crearDesdeEscaneo(){
+  const txt = $('#scanText') ? $('#scanText').value : '';
+  const proj = $('#scanProj') ? $('#scanProj').value : '';
+  const prio = $('#scanPrio') ? $('#scanPrio').value : 'media';
+  const fecha = $('#scanDate') ? $('#scanDate').value : today();
+  const lineas = txt.split('\n').map(s => s.trim()).filter(Boolean);
+  if(!lineas.length){ toast('No hay texto para crear tareas'); return; }
+  let n = 0;
+  const nuevas = [];
+  lineas.forEach(l => {
+    const p = parseQuick(l);
+    if(!p.title) return;
+    const t = touch({
+      id:uid(), title:p.title, date:p.date !== today() ? p.date : fecha, time:p.time,
+      projectId: p.projectId || proj, priority: p.priority !== 'media' ? p.priority : prio,
+      status:'pendiente', note:'Desde una nota escaneada', migrated:false, completedAt:'',
+      remind:0, subtasks:[], createdAt:new Date().toISOString()
+    });
+    S.tasks.push(t); nuevas.push(t.id); n++;
+  });
+  if(!n){ toast('No pude armar ninguna tarea'); return; }
+  lastAdded = nuevas[nuevas.length - 1];
+  save(); closeModal(); goView('hoy');
+  const nom = proj ? (projById(proj) || {}).name : '';
+  toast(n + (n === 1 ? ' tarea creada' : ' tareas creadas') + (nom ? ' en ' + nom : ''), 'Deshacer', () => {
+    S.tasks = S.tasks.filter(t => nuevas.indexOf(t.id) < 0); save(); render();
+  });
+  bruceDice(`Escaneé tu nota y anoté ${n} ${n===1?'tarea':'tareas'}${nom ? ' en ' + nom : ''}. 🐾`, false);
+}
+
 /* ---- vigilancia proactiva ---- */
 let ultimoNudge = Date.now();
 function bruceVigila(){
@@ -1981,6 +2268,222 @@ function bruceVigila(){
     const pend = tareasHoy().filter(t => !isDone(t)).length, atr = atrasadas().length;
     if(pend || atr) bruceDice(`Te quedan ${pend} tarea${pend===1?'':'s'} de hoy${atr?` y ${atr} atrasada${atr===1?'':'s'}`:''}. ¿Vamos con la siguiente?`, false);
   }
+}
+
+/* =========================================================
+   NUBE — sincroniza PC y teléfono (Supabase + cifrado local)
+   Los datos viajan cifrados: sin tu clave nadie los puede leer.
+   ========================================================= */
+const NUBE = () => S.settings.nube || {};
+const CRIPTO_OK = !!(window.crypto && window.crypto.subtle);
+function nubeLista(){
+  const n = NUBE();
+  if(n.tipo === 'drive') return !!n.clientId;
+  return CRIPTO_OK && !!(n.url && n.key && n.pass);
+}
+function nubeNombre(){ return NUBE().tipo === 'drive' ? 'Google Drive' : 'Supabase'; }
+
+/* ---- Google Drive (carpeta privada de la app: no ve tus otros archivos) ---- */
+let gisToken = null, gisExp = 0;
+function cargarGIS(){
+  if(window.google && window.google.accounts && google.accounts.oauth2) return Promise.resolve();
+  return new Promise((ok, err) => {
+    const s = document.createElement('script');
+    s.src = 'https://accounts.google.com/gsi/client';
+    s.async = true; s.defer = true;
+    s.onload = ok; s.onerror = () => err(new Error('no cargó Google'));
+    document.head.appendChild(s);
+  });
+}
+async function driveToken(interactivo){
+  if(gisToken && Date.now() < gisExp - 60000) return gisToken;
+  await cargarGIS();
+  const cid = (NUBE().clientId || '').trim();
+  if(!cid) throw new Error('falta el ID de cliente');
+  return new Promise((ok, err) => {
+    let listo = false;
+    const cli = google.accounts.oauth2.initTokenClient({
+      client_id: cid,
+      scope: 'https://www.googleapis.com/auth/drive.appdata',
+      prompt: interactivo ? 'consent' : '',
+      callback: r => {
+        listo = true;
+        if(r && r.access_token){
+          gisToken = r.access_token;
+          gisExp = Date.now() + (Number(r.expires_in) || 3600) * 1000;
+          ok(gisToken);
+        }else err(new Error('sin permiso'));
+      },
+      error_callback: e => { listo = true; err(new Error((e && e.type) || 'permiso denegado')); }
+    });
+    cli.requestAccessToken();
+    setTimeout(() => { if(!listo) err(new Error('sesión de Google no iniciada')); }, 45000);
+  });
+}
+async function driveBuscar(tok){
+  const url = 'https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&fields=files(id,name)&q=' + encodeURIComponent("name='taskflow.json'");
+  const r = await fetch(url, { headers:{ Authorization:'Bearer ' + tok } });
+  if(!r.ok) throw new Error('HTTP ' + r.status);
+  const j = await r.json();
+  return (j.files && j.files[0]) || null;
+}
+async function driveLeer(tok, id){
+  const r = await fetch('https://www.googleapis.com/drive/v3/files/' + id + '?alt=media', { headers:{ Authorization:'Bearer ' + tok } });
+  if(!r.ok) throw new Error('HTTP ' + r.status);
+  return r.json();
+}
+async function driveGuardar(tok, id, datos){
+  const meta = id ? {} : { name:'taskflow.json', parents:['appDataFolder'] };
+  const lim = 'taskflow' + Date.now();
+  const cuerpo =
+    '--' + lim + '\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n' + JSON.stringify(meta) +
+    '\r\n--' + lim + '\r\nContent-Type: application/json\r\n\r\n' + JSON.stringify(datos) +
+    '\r\n--' + lim + '--';
+  const url = id
+    ? 'https://www.googleapis.com/upload/drive/v3/files/' + id + '?uploadType=multipart'
+    : 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart';
+  const r = await fetch(url, {
+    method: id ? 'PATCH' : 'POST',
+    headers:{ Authorization:'Bearer ' + tok, 'Content-Type':'multipart/related; boundary=' + lim },
+    body: cuerpo
+  });
+  if(!r.ok) throw new Error('HTTP ' + r.status);
+  return r.json();
+}
+async function syncDrive(silencio){
+  const tok = await driveToken(!silencio && !gisToken);
+  const f = await driveBuscar(tok);
+  if(f){
+    try{
+      const remoto = await driveLeer(tok, f.id);
+      if(remoto && Array.isArray(remoto.tasks)){
+        const ajustes = S.settings;
+        S = fusionar(remoto);
+        S.settings = ajustes;
+      }
+    }catch(e){}
+  }
+  await driveGuardar(tok, f && f.id, {
+    tasks:S.tasks, projects:S.projects, notes:S.notes, habits:S.habits,
+    deleted:S.deleted || [], guardado:new Date().toISOString()
+  });
+}
+async function claveDe(pass, salt){
+  const enc = new TextEncoder();
+  const base = await crypto.subtle.importKey('raw', enc.encode(pass), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey(
+    { name:'PBKDF2', salt:enc.encode(salt), iterations:120000, hash:'SHA-256' },
+    base, { name:'AES-GCM', length:256 }, false, ['encrypt','decrypt']);
+}
+async function idDe(pass){
+  const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('taskflow:' + pass));
+  return Array.from(new Uint8Array(h)).slice(0, 16).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+const b64 = u8 => btoa(String.fromCharCode.apply(null, u8));
+const deB64 = s => new Uint8Array(atob(s).split('').map(c => c.charCodeAt(0)));
+async function cifrar(obj, pass){
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const k = await claveDe(pass, 'taskflow-sal');
+  const data = new TextEncoder().encode(JSON.stringify(obj));
+  const out = new Uint8Array(await crypto.subtle.encrypt({ name:'AES-GCM', iv }, k, data));
+  return b64(iv) + '.' + b64(out);
+}
+async function descifrar(txt, pass){
+  const [a, b] = String(txt).split('.');
+  const k = await claveDe(pass, 'taskflow-sal');
+  const out = await crypto.subtle.decrypt({ name:'AES-GCM', iv:deB64(a) }, k, deB64(b));
+  return JSON.parse(new TextDecoder().decode(out));
+}
+function nubeHeaders(){
+  const n = NUBE();
+  return { apikey:n.key, Authorization:'Bearer ' + n.key, 'Content-Type':'application/json', Prefer:'resolution=merge-duplicates' };
+}
+let sincronizando = false, tSync = null;
+async function sincronizar(silencio){
+  if(!nubeLista() || sincronizando || !navigator.onLine) return;
+  sincronizando = true;
+  pintarNube('sync');
+  try{
+    if(NUBE().tipo === 'drive'){
+      await syncDrive(silencio);
+      S.settings.nube.last = new Date().toISOString();
+      save(); render(); pintarNube('ok');
+      if(!silencio) toast('Sincronizado con Google Drive');
+      sincronizando = false;
+      return;
+    }
+    const n = NUBE(), id = await idDe(n.pass);
+    const base = n.url.replace(/\/+$/, '') + '/rest/v1/taskflow';
+    const r = await fetch(base + '?id=eq.' + id + '&select=data', { headers:nubeHeaders() });
+    if(!r.ok) throw new Error('HTTP ' + r.status);
+    const filas = await r.json();
+    if(filas && filas[0] && filas[0].data){
+      try{
+        const remoto = await descifrar(filas[0].data, n.pass);
+        if(remoto && Array.isArray(remoto.tasks)){
+          const ajustes = S.settings;
+          S = fusionar(remoto);
+          S.settings = ajustes;
+        }
+      }catch(e){ throw new Error('clave'); }
+    }
+    const cuerpo = { id, data: await cifrar({ tasks:S.tasks, projects:S.projects, notes:S.notes, habits:S.habits, deleted:S.deleted || [] }, n.pass), updated_at:new Date().toISOString() };
+    const w = await fetch(base, { method:'POST', headers:nubeHeaders(), body:JSON.stringify(cuerpo) });
+    if(!w.ok) throw new Error('HTTP ' + w.status);
+    S.settings.nube.last = new Date().toISOString();
+    save(); render();
+    pintarNube('ok');
+    if(!silencio) toast('Sincronizado con la nube');
+  }catch(e){
+    pintarNube('error');
+    if(!silencio) toast(String(e.message) === 'clave' ? 'La clave secreta no coincide' : 'No pude sincronizar: ' + e.message);
+  }finally{ sincronizando = false; }
+}
+function pintarNube(estado){
+  $$('[data-nube]').forEach(el => { el.dataset.nube = estado; });
+}
+function syncPronto(){
+  if(!nubeLista()) return;
+  clearTimeout(tSync);
+  tSync = setTimeout(() => sincronizar(true), 6000);
+}
+function nubeModal(tipo){
+  const n = NUBE();
+  const t = tipo || n.tipo || 'drive';
+  if(location.protocol === 'file:'){
+    toast('La nube funciona con la app publicada (https), no con el archivo local');
+    return;
+  }
+  const cuerpo = t === 'drive'
+    ? `<div class="field"><label>Guardar en</label>
+         <select name="tipo"><option value="drive" selected>Google Drive (tu cuenta)</option><option value="supabase">Supabase</option></select></div>
+       <p class="hint" style="margin:0 0 12px">Se guarda un solo archivo en la <b>carpeta privada de la app</b> dentro de tu Drive. TaskFlow no puede ver ni tocar el resto de tus archivos.</p>
+       <div class="field"><label>ID de cliente de Google</label>
+         <input name="clientId" value="${esc(n.clientId || '')}" placeholder="1234-abcd.apps.googleusercontent.com" required>
+         <p class="hint" style="margin-top:6px">Se crea gratis en Google Cloud. Te paso los pasos exactos.</p></div>`
+    : `<div class="field"><label>Guardar en</label>
+         <select name="tipo"><option value="drive">Google Drive (tu cuenta)</option><option value="supabase" selected>Supabase</option></select></div>
+       <p class="hint" style="margin:0 0 12px">Los datos se cifran en el dispositivo antes de subir: sin tu clave secreta nadie puede leerlos.</p>
+       <div class="field"><label>URL del proyecto</label>
+         <input name="url" value="${esc(n.url || '')}" placeholder="https://xxxx.supabase.co" required></div>
+       <div class="field"><label>Clave pública (anon key)</label>
+         <input name="key" value="${esc(n.key || '')}" placeholder="eyJhbGciOi..." required></div>
+       <div class="field"><label>Tu clave secreta</label>
+         <input name="pass" value="${esc(n.pass || '')}" placeholder="La misma en ambos equipos" required></div>`;
+
+  openModal(modalShell(t === 'drive' ? 'Conectar Google Drive' : 'Conectar Supabase', cuerpo,
+    n.tipo ? `<button type="button" class="btn danger left" data-act="nube-off">Desconectar</button>` : ''),
+  (data) => {
+    if(data.tipo === 'drive'){
+      if(!data.clientId || !data.clientId.trim()) return;
+      S.settings.nube = { tipo:'drive', clientId:data.clientId.trim(), last:'' };
+    }else{
+      if(!data.url || !data.key || !data.pass) return;
+      S.settings.nube = { tipo:'supabase', url:data.url.trim(), key:data.key.trim(), pass:data.pass.trim(), last:'' };
+    }
+    save(); closeModal(); render();
+    sincronizar();
+  });
 }
 
 /* ---- recordatorios (mientras la app está abierta) ---- */
@@ -2011,6 +2514,27 @@ function checkReminders(){
       if(now.getTime() >= pre && now.getTime() < dt.getTime()) disparar(t, 'pre');
     }
     if(now.getTime() >= dt.getTime() && now.getTime() <= fin) disparar(t, 'now');
+  });
+  /* horarios de hábitos: aviso a la hora si no está marcado */
+  const d0 = today(), hhmm = pad(now.getHours()) + ':' + pad(now.getMinutes());
+  S.habits.forEach(h => {
+    habHoras(h).forEach(t => {
+      const clave = 'hab-' + h.id + '-' + d0 + '-' + t;
+      if(notificadas.has(clave)) return;
+      const v = h.log && h.log[d0];
+      const hecho = v === true || (v && v[t]);
+      if(hecho || t > hhmm) return;
+      const [hh, mm] = t.split(':').map(Number);
+      const dt = new Date(); dt.setHours(hh, mm, 0, 0);
+      if(now.getTime() - dt.getTime() > 45 * 60000) return;   /* no avisa por horarios muy pasados */
+      notificadas.add(clave);
+      ladrido('aviso');
+      try{
+        if(window.Notification && Notification.permission === 'granted')
+          new Notification('Bruce te recuerda', { body:`${h.icon || ''} ${h.name} · ${t}` });
+      }catch(e){}
+      bruceDice(`${h.icon || '🔄'} Toca "${h.name}" (${t}). ¿Ya lo hiciste?`, true);
+    });
   });
   bruceVigila();
 }
@@ -2071,6 +2595,13 @@ document.addEventListener('click', e => {
     case 'bruce-close': cerrarBruce(); break;
     case 'bruce-ask':   preguntarBruce(el.dataset.q); break;
     case 'mic':         dictar(el.dataset.destino); break;
+    case 'scan':        abrirEscaner(); break;
+    case 'scan-shot':   capturarFoto(); break;
+    case 'scan-create': crearDesdeEscaneo(); break;
+    case 'scan-close':  cerrarCamara(); closeModal(); break;
+    case 'nube':        nubeModal(el.dataset.tipo); break;
+    case 'sync-now':    sincronizar(); break;
+    case 'nube-off':    S.settings.nube = null; gisToken = null; save(); closeModal(); render(); toast('Nube desconectada'); break;
     case 'tg-bruce':    S.settings.bruce = S.settings.bruce === false; save(); render(); toast('Bruce ' + (S.settings.bruce ? 'activo' : 'en silencio')); break;
     case 'tg-sound':    S.settings.sound = S.settings.sound === false; save(); render(); if(S.settings.sound) ladrido('saludo'); toast('Ladridos ' + (S.settings.sound ? 'activados' : 'silenciados')); break;
     case 'test-alarm':  unlockAudio(); ladrido('aviso'); pedirPermisoNotif(); toast('Así te avisa Bruce'); break;
@@ -2101,7 +2632,13 @@ document.addEventListener('click', e => {
     case 'new-habit':   habitModal(null); break;
     case 'edit-habit':  habitModal(id); break;
     case 'del-habit':   delHabit(id); break;
-    case 'habit-day':   toggleHabitDay(id, el.dataset.k); break;
+    case 'habit-day':   marcarHabito(id, el.dataset.k); break;
+    case 'habit-hora':  marcarHabito(id, el.dataset.k, el.dataset.h); break;
+    case 'pick-ico': {
+      const inp = $('#icoInput'); if(inp) inp.value = el.dataset.i;
+      $$('.ico').forEach(b => b.classList.toggle('sel', b === el));
+      break;
+    }
   }
 });
 
@@ -2131,7 +2668,9 @@ document.addEventListener('submit', e => {
 /* cambios en selects (filtro por proyecto) */
 document.addEventListener('change', e => {
   if(e.target.dataset && e.target.dataset.act === 'projfilter'){ ui.proj = e.target.value; render(); }
+  if(e.target.name === 'tipo' && backdrop.classList.contains('open')) nubeModal(e.target.value);
   if(e.target.id === 'importFile' && e.target.files && e.target.files[0]) importData(e.target.files[0]);
+  if(e.target.id === 'scanFile' && e.target.files && e.target.files[0]) fotoDesdeArchivo(e.target.files[0]);
   if(e.target.name === 'remind' && Number(e.target.value) > 0){ pedirPermisoNotif(); unlockAudio(); }
   if(e.target.dataset && e.target.dataset.act === 'habit-hour'){ S.settings.habitHour = Number(e.target.value); save(); toast('Repaso a las ' + pad(S.settings.habitHour) + ':00'); }
   if(e.target.dataset && e.target.dataset.act === 'nudge-every'){ S.settings.nudgeEvery = Number(e.target.value); save(); toast('Aviso cada ' + S.settings.nudgeEvery + ' min'); }
@@ -2213,6 +2752,19 @@ tickClock();
 setInterval(tickClock, 1000);
 checkReminders();
 setInterval(checkReminders, 30000);
+
+/* nube: al abrir, al volver a la pestaña y cada 3 minutos */
+if(nubeLista()) sincronizar(true);
+document.addEventListener('visibilitychange', () => { if(!document.hidden) sincronizar(true); });
+window.addEventListener('online', () => sincronizar(true));
+setInterval(() => sincronizar(true), 180000);
+
+/* instalable como app (service worker) */
+if('serviceWorker' in navigator && location.protocol.startsWith('http')){
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  });
+}
 
 /* el navegador exige un gesto antes de permitir sonido */
 document.addEventListener('click', unlockAudio, { once:true });
