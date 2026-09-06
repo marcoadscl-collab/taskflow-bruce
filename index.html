@@ -1303,7 +1303,8 @@ function renderPerfil(){
     ${NUBE().tipo
       ? `<button class="rowitem" data-act="nube">${icon('cloud')} <span>Conectado a ${nubeNombre()}</span><span class="chev">Editar</span></button>
          <button class="rowitem" data-act="sync-now" data-nube="ok">${icon('repeat')} <span>Sincronizar ahora</span>
-           <span class="chev">${S.settings.nube.last ? new Date(S.settings.nube.last).toLocaleString('es-CL',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}) : 'nunca'}</span></button>`
+           <span class="chev">${S.settings.nube.last ? new Date(S.settings.nube.last).toLocaleString('es-CL',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}) : 'nunca'}</span></button>
+         ${NUBE().tipo === 'drive' ? `<button class="rowitem" data-act="drive-cuenta">${icon('user')} <span>Cambiar de cuenta de Google</span><span class="chev">›</span></button>` : ''}`
       : `<button class="rowitem" data-act="nube" data-tipo="drive">${icon('cloud')} <span>Guardar en mi Google Drive</span><span class="chev">›</span></button>
          <button class="rowitem" data-act="nube" data-tipo="supabase">${icon('cloud')} <span>Guardar en Supabase (cifrado)</span><span class="chev">›</span></button>`}
   </div>
@@ -2295,8 +2296,9 @@ function cargarGIS(){
     document.head.appendChild(s);
   });
 }
-async function driveToken(interactivo){
-  if(gisToken && Date.now() < gisExp - 60000) return gisToken;
+async function driveToken(interactivo, elegirCuenta){
+  if(gisToken && !elegirCuenta && Date.now() < gisExp - 60000) return gisToken;
+  if(elegirCuenta){ gisToken = null; gisExp = 0; }
   await cargarGIS();
   const cid = (NUBE().clientId || '').trim();
   if(!cid) throw new Error('falta el ID de cliente');
@@ -2305,7 +2307,7 @@ async function driveToken(interactivo){
     const cli = google.accounts.oauth2.initTokenClient({
       client_id: cid,
       scope: 'https://www.googleapis.com/auth/drive.appdata',
-      prompt: interactivo ? 'consent' : '',
+      prompt: elegirCuenta ? 'select_account consent' : (interactivo ? 'consent' : ''),
       callback: r => {
         listo = true;
         if(r && r.access_token){
@@ -2350,8 +2352,10 @@ async function driveGuardar(tok, id, datos){
   if(!r.ok) throw new Error('HTTP ' + r.status);
   return r.json();
 }
+let forzarCuenta = false;
 async function syncDrive(silencio){
-  const tok = await driveToken(!silencio && !gisToken);
+  const tok = await driveToken(!silencio && !gisToken, forzarCuenta);
+  forzarCuenta = false;
   const f = await driveBuscar(tok);
   if(f){
     try{
@@ -2601,6 +2605,7 @@ document.addEventListener('click', e => {
     case 'scan-close':  cerrarCamara(); closeModal(); break;
     case 'nube':        nubeModal(el.dataset.tipo); break;
     case 'sync-now':    sincronizar(); break;
+    case 'drive-cuenta':gisToken = null; gisExp = 0; forzarCuenta = true; toast('Elige la cuenta en la ventana de Google'); sincronizar(); break;
     case 'nube-off':    S.settings.nube = null; gisToken = null; save(); closeModal(); render(); toast('Nube desconectada'); break;
     case 'tg-bruce':    S.settings.bruce = S.settings.bruce === false; save(); render(); toast('Bruce ' + (S.settings.bruce ? 'activo' : 'en silencio')); break;
     case 'tg-sound':    S.settings.sound = S.settings.sound === false; save(); render(); if(S.settings.sound) ladrido('saludo'); toast('Ladridos ' + (S.settings.sound ? 'activados' : 'silenciados')); break;
