@@ -1,6 +1,6 @@
 /* TaskFlow · Bruce — service worker
    Guarda la app para abrirla sin conexión y que se instale como aplicación. */
-const CACHE = 'taskflow-v4';
+const CACHE = 'taskflow-v5';
 const ARCHIVOS = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {

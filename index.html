@@ -3387,10 +3387,29 @@ window.addEventListener('focus', () => sincronizar(true));
 window.addEventListener('online', () => sincronizar(true));
 setInterval(() => sincronizar(true), 60000);
 
-/* instalable como app (service worker) */
+/* instalable como app (service worker).
+   Busca versión nueva al abrir y cada 10 min; si la hay, recarga sola. */
 if('serviceWorker' in navigator && location.protocol.startsWith('http')){
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js').catch(() => {});
+    navigator.serviceWorker.register('sw.js').then(reg => {
+      reg.update();
+      setInterval(() => reg.update(), 600000);
+      reg.addEventListener('updatefound', () => {
+        const nuevo = reg.installing;
+        if(!nuevo) return;
+        nuevo.addEventListener('statechange', () => {
+          if(nuevo.state === 'installed' && navigator.serviceWorker.controller){
+            toast('Hay una versión nueva', 'Actualizar', () => location.reload());
+          }
+        });
+      });
+    }).catch(() => {});
+    let recargando = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if(recargando) return;
+      recargando = true;
+      location.reload();
+    });
   });
 }
 
