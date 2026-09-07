@@ -364,9 +364,33 @@ select.pill{padding:5px 10px;outline:none}
 .ring b{position:absolute;inset:0;display:grid;place-items:center;font-size:22px;font-weight:750;z-index:1;letter-spacing:-1px}
 
 /* ---------- detalle de tarea ---------- */
-.det-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
-.det-estado{display:flex;gap:7px;flex-wrap:wrap}
-.det-nota{margin-top:14px;background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-size:13.4px;white-space:pre-wrap;color:var(--muted)}
+.det-top{padding:20px 22px 16px;border-bottom:1px solid var(--line)}
+.det-cab{display:flex;align-items:flex-start;gap:12px}
+.det-proj{display:flex;align-items:center;gap:7px;font-size:11.5px;font-weight:700;color:var(--muted);
+  text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px}
+.det-proj i{width:8px;height:8px;border-radius:50%;display:inline-block}
+.det-titulo{margin:0;font-size:19px;line-height:1.3;letter-spacing:-.3px;font-weight:650;word-break:break-word}
+.det-estado{display:flex;gap:0;margin-top:16px;background:var(--panel2);border:1px solid var(--line);
+  border-radius:999px;padding:3px}
+.segm{flex:1;padding:8px 6px;border-radius:999px;font-size:12.5px;font-weight:600;color:var(--muted);transition:.14s}
+.segm:hover{color:var(--text)}
+.segm.on{background:var(--accent);color:var(--on-accent);font-weight:700}
+.det-body{padding:20px 22px 8px}
+.det-datos{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:14px;margin-bottom:4px}
+.det-dato{display:flex;flex-direction:column;gap:3px}
+.det-lbl{font-size:10.5px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;color:var(--muted)}
+.det-val{font-size:14.5px;font-weight:600;display:flex;align-items:center;gap:7px}
+.det-sec,.det-curso{font-size:11.5px;color:var(--muted);font-weight:500}
+.det-curso{color:var(--accent-ink);font-weight:700}
+.det-bloque{margin-top:22px;padding-top:20px;border-top:1px solid var(--line)}
+.det-nota{margin-top:8px;background:var(--panel2);border:1px solid var(--line);border-radius:12px;
+  padding:13px 15px;font-size:13.6px;line-height:1.6;white-space:pre-wrap}
+.det-body .subitem{padding:10px 13px}
+.det-body .subadd{margin-top:10px}
+.det-body .subadd input{padding:10px 14px;border-radius:11px}
+.det-pie{padding:14px 22px 20px;gap:8px;align-items:center;border-top:1px solid var(--line)}
+.det-pie .icon-btn:hover{border-color:var(--accent)}
+.det-pie .btn.primary{padding:11px 22px}
 .task-body{cursor:pointer;border-radius:8px}
 .task-body:hover .task-title{color:var(--accent-ink)}
 .viene-t{cursor:pointer}
@@ -513,7 +537,7 @@ select.pill{padding:5px 10px;outline:none}
 /* ---------- modal ---------- */
 .backdrop{position:fixed;inset:0;z-index:100;background:rgba(10,10,14,.42);display:none;align-items:center;justify-content:center;padding:18px}
 .backdrop.open{display:flex}
-.modal{background:var(--panel);border:1px solid var(--line);border-radius:24px;width:100%;max-width:470px;box-shadow:0 20px 60px rgba(0,0,0,.28);max-height:88vh;overflow:auto}
+.modal{background:var(--panel);border:1px solid var(--line);border-radius:24px;width:100%;max-width:520px;box-shadow:0 20px 60px rgba(0,0,0,.28);max-height:88vh;overflow:auto}
 .modal-h{display:flex;align-items:center;justify-content:space-between;padding:18px 20px 2px}
 .modal-h h3{margin:0;font-size:17px;font-weight:640;letter-spacing:-.3px}
 .modal-b{padding:14px 20px}
@@ -688,10 +712,17 @@ function applyFilters(list){
   if(ui.proj)                     r = r.filter(t => t.projectId === ui.proj);
   return r;
 }
-/* "09:00 – 10:30" si hay hora de término, si no solo la de inicio */
-function horario(t){
-  if(!t.time) return '';
-  return t.timeEnd ? t.time + ' – ' + t.timeEnd : t.time;
+function horario(t){ return t.time || ''; }
+/* "12 sep → 18 sep" cuando hay fecha de inicio distinta; si no, solo la de término */
+function rangoFechas(t){
+  if(t.dateStart && t.dateStart !== t.date) return shortDate(t.dateStart) + ' → ' + shortDate(t.date);
+  return shortDate(t.date);
+}
+/* la tarea ya empezó y aún no vence */
+function enCurso(t){
+  if(!t.dateStart || isDone(t)) return false;
+  const h = today();
+  return t.dateStart <= h && h <= (t.date || h) && t.dateStart !== t.date;
 }
 function symbolFor(t){
   if(t.status === 'completada') return '✓';
@@ -840,8 +871,9 @@ function taskItem(t){
       <div class="task-title">${alta ? '<span class="bang">!</span>':''}${n}</div>
       <div class="task-meta">
         ${foco ? `<span class="chip">${icon('target')} Foco</span>` : ''}
-        ${t.time ? `<span class="chip">${icon('clock')} ${esc(horario(t))}</span>` : ''}
-        <span class="chip">${icon('calendar')} ${esc(shortDate(t.date))}</span>
+        ${t.time ? `<span class="chip">${icon('clock')} ${esc(t.time)}</span>` : ''}
+        <span class="chip">${icon('calendar')} ${esc(rangoFechas(t))}</span>
+        ${enCurso(t) ? '<span class="chip" style="color:var(--accent-ink);border-color:var(--accent)">● En curso</span>' : ''}
         ${p ? `<span class="chip"><i style="background:${esc(p.color)}"></i>${esc(p.name)}</span>` : ''}
         <span class="chip"><span class="dot ${t.priority}"></span>${pr.label}</span>
         ${t.subtasks && t.subtasks.length ? `<span class="chip">${icon('check')} ${t.subtasks.filter(s=>s.done).length}/${t.subtasks.length}</span>` : ''}
@@ -1297,19 +1329,23 @@ function renderAgenda(){
   const base  = fromKey(sel);
   const start = startOfWeek(base);
   const days  = Array.from({length:7}, (_, i) => key(addDays(start, i)));
-  const list  = applyFilters(S.tasks.filter(t => t.date === sel)).sort(byDate);
+  /* una tarea con rango aparece en todos sus días, no solo el último */
+  const enElDia = t => t.date === sel || (t.dateStart && t.dateStart <= sel && sel <= t.date);
+  const list  = applyFilters(S.tasks.filter(enElDia)).sort(byDate);
   const conHora = list.filter(t => t.time), sinHora = list.filter(t => !t.time);
 
   const item = t => {
     const p = projById(t.projectId);
     return `<div class="aitem">
-      <div class="atime">${t.time ? esc(t.time) + (t.timeEnd ? '<br><small style="opacity:.6">' + esc(t.timeEnd) + '</small>' : '') : '—'}</div>
+      <div class="atime">${t.time ? esc(t.time) : '—'}</div>
       <div class="acard ${isDone(t)?'done':''}" style="border-left-color:${p ? esc(p.color) : 'var(--accent)'}">
         <button class="bullet ${t.status}" data-act="toggle" data-id="${t.id}" aria-label="Completar ${esc(t.title)}">${symbolFor(t)}</button>
         <div style="flex:1;min-width:0;cursor:pointer" data-act="detalle" data-id="${t.id}" role="button" tabindex="0">
           <div class="task-title" style="${isDone(t)?'text-decoration:line-through;color:var(--muted)':''}">${esc(t.title)}</div>
           <div class="task-meta">
             ${p ? `<span class="chip"><i style="background:${esc(p.color)}"></i>${esc(p.name)}</span>` : ''}
+            ${t.dateStart && t.dateStart !== t.date
+              ? `<span class="chip" style="color:var(--accent-ink);border-color:var(--accent)">${icon('calendar')} ${esc(rangoFechas(t))}${t.date === sel ? ' · vence' : ''}</span>` : ''}
             <span class="chip"><span class="dot ${t.priority}"></span>${PRIOS[t.priority].label}</span>
             ${t.subtasks && t.subtasks.length ? `<span class="chip">${icon('check')} ${t.subtasks.filter(s=>s.done).length}/${t.subtasks.length}</span>` : ''}
             ${t.remind ? `<span class="chip">${icon('bell')} ${t.remind} min antes</span>` : ''}
@@ -1477,47 +1513,64 @@ function detalleTarea(id){
   const hechas = subs.filter(s => s.done).length;
   const pct = subs.length ? Math.round(hechas / subs.length * 100) : 0;
 
-  openModal(`<div class="modal-h">
-      <h3 style="flex:1;min-width:0">${t.priority==='alta' && !isDone(t) ? '<span class="bang">!</span>':''}${esc(t.title)}</h3>
-      <button type="button" class="icon-btn" data-act="close" aria-label="Cerrar">${icon('x')}</button></div>
-    <div class="modal-b">
-      <div class="det-chips">
-        <span class="chip">${icon('calendar')} ${esc(shortDate(t.date))}</span>
-        ${t.time ? `<span class="chip">${icon('clock')} ${esc(horario(t))}</span>` : ''}
-        ${p ? `<span class="chip"><i style="background:${esc(p.color)}"></i>${esc(p.name)}</span>` : ''}
-        <span class="chip"><span class="dot ${t.priority}"></span>${PRIOS[t.priority].label}</span>
-        ${t.remind ? `<span class="chip">${icon('bell')} ${t.remind} min antes</span>` : ''}
-        ${t.migrated && !isDone(t) ? '<span class="chip">→ Migrada</span>' : ''}
-      </div>
+  const dato = (etiqueta, valor, extra) => `<div class="det-dato">
+      <span class="det-lbl">${etiqueta}</span>
+      <span class="det-val">${valor}</span>${extra || ''}</div>`;
 
+  openModal(`<div class="det-top" style="${p ? 'border-left:5px solid ' + esc(p.color) : ''}">
+      <div class="det-cab">
+        <div style="flex:1;min-width:0">
+          ${p ? `<div class="det-proj"><i style="background:${esc(p.color)}"></i>${esc(p.name)}</div>` : ''}
+          <h3 class="det-titulo">${t.priority==='alta' && !isDone(t) ? '<span class="bang">!</span>':''}${esc(t.title)}</h3>
+        </div>
+        <button type="button" class="icon-btn" data-act="close" aria-label="Cerrar">${icon('x')}</button>
+      </div>
       <div class="det-estado">
         ${[['pendiente','Pendiente'],['proceso','En proceso'],['completada','Completada']].map(e =>
-          `<button type="button" class="pill ${t.status===e[0]?'active':''}" data-act="det-estado" data-id="${t.id}" data-e="${e[0]}">${e[1]}</button>`).join('')}
+          `<button type="button" class="segm ${t.status===e[0]?'on':''}" data-act="det-estado" data-id="${t.id}" data-e="${e[0]}">${e[1]}</button>`).join('')}
+      </div>
+    </div>
+
+    <div class="modal-b det-body">
+      <div class="det-datos">
+        ${t.dateStart && t.dateStart !== t.date
+          ? dato('Inicio', esc(shortDate(t.dateStart))) + dato('Término', esc(shortDate(t.date)),
+              enCurso(t) ? '<span class="det-curso">En curso</span>' : '')
+          : dato('Fecha', esc(shortDate(t.date)))}
+        ${t.time ? dato('Hora', esc(t.time), t.remind ? `<span class="det-sec">${t.remind} min antes</span>` : '') : ''}
+        ${dato('Prioridad', `<span class="dot ${t.priority}"></span> ${PRIOS[t.priority].label}`)}
       </div>
 
-      ${t.note ? `<div class="det-nota">${esc(t.note)}</div>` : ''}
+      ${t.note ? `<div class="det-bloque">
+          <div class="det-lbl">Nota</div>
+          <div class="det-nota">${esc(t.note)}</div>
+        </div>` : ''}
 
-      <div class="section-title" style="margin:18px 0 8px">Subtareas
-        ${subs.length ? `<span class="count">${hechas}/${subs.length}</span>` : ''}</div>
-      ${subs.length ? `<div class="bar" style="margin:0 0 10px"><span style="width:${pct}%"></span></div>` : ''}
-      <div class="subs">
-        ${subs.map((s, i) => `<div class="subitem ${s.done?'done':''}">
-            <button type="button" class="bullet ${s.done?'completada':''}" data-act="det-sub" data-id="${t.id}" data-i="${i}"
-                    style="width:19px;height:19px;font-size:11px" aria-label="Marcar ${esc(s.text)}">${s.done?'✓':''}</button>
-            <span>${esc(s.text)}</span>
-          </div>`).join('')}
-        <div class="subadd">
-          <input id="detSub" placeholder="Añadir subtarea y Enter..." data-id="${t.id}" autocomplete="off" aria-label="Nueva subtarea">
-          <button type="button" class="btn sm" data-act="det-sub-add" data-id="${t.id}">+</button>
+      <div class="det-bloque">
+        <div class="det-lbl" style="display:flex;align-items:center;gap:8px">Subtareas
+          ${subs.length ? `<b style="color:var(--text)">${hechas}/${subs.length}</b>` : ''}</div>
+        ${subs.length ? `<div class="bar" style="margin:10px 0 12px"><span style="width:${pct}%"></span></div>` : ''}
+        <div class="subs">
+          ${subs.map((s, i) => `<div class="subitem ${s.done?'done':''}">
+              <button type="button" class="bullet ${s.done?'completada':''}" data-act="det-sub" data-id="${t.id}" data-i="${i}"
+                      style="width:21px;height:21px;font-size:12px" aria-label="Marcar ${esc(s.text)}">${s.done?'✓':''}</button>
+              <span>${esc(s.text)}</span>
+            </div>`).join('') || '<p class="dim" style="font-size:13px;margin:2px 0 10px">Divide la tarea en pasos, si te sirve.</p>'}
+          <div class="subadd">
+            <input id="detSub" placeholder="Añadir un paso y Enter..." data-id="${t.id}" autocomplete="off" aria-label="Nueva subtarea">
+            <button type="button" class="btn sm" data-act="det-sub-add" data-id="${t.id}" aria-label="Añadir">+</button>
+          </div>
         </div>
       </div>
     </div>
-    <div class="modal-f">
-      <button type="button" class="btn danger left" data-act="del-task" data-id="${t.id}">${icon('trash')}</button>
-      <button type="button" class="btn" data-act="date-task" data-id="${t.id}">${icon('calendar')} Fecha</button>
-      <button type="button" class="btn" data-act="edit-task" data-id="${t.id}">${icon('edit')} Editar</button>
+
+    <div class="modal-f det-pie">
+      <button type="button" class="icon-btn" data-act="del-task" data-id="${t.id}" aria-label="Eliminar" title="Eliminar">${icon('trash')}</button>
+      <button type="button" class="icon-btn" data-act="date-task" data-id="${t.id}" aria-label="Cambiar fecha" title="Cambiar fecha">${icon('calendar')}</button>
+      <button type="button" class="icon-btn" data-act="edit-task" data-id="${t.id}" aria-label="Editar" title="Editar">${icon('edit')}</button>
+      <span style="flex:1"></span>
       <button type="button" class="btn primary" data-act="det-toggle" data-id="${t.id}">
-        ${isDone(t) ? 'Reabrir' : '✓ Completar'}</button>
+        ${isDone(t) ? 'Reabrir tarea' : '✓ Completar'}</button>
     </div>`);
 }
 function detSubAdd(id){
@@ -1563,16 +1616,19 @@ function addSub(){
 }
 function taskModal(id, preset){
   const t = id ? taskById(id) : null;
-  const d = t || Object.assign({ title:'', date:today(), time:'', timeEnd:'', projectId:ui.project||'', priority:'media', status:'pendiente', note:'', remind:0 }, preset || {});
+  const d = t || Object.assign({ title:'', date:today(), time:'', dateStart:'', projectId:ui.project||'', priority:'media', status:'pendiente', note:'', remind:0 }, preset || {});
   modalSubs = (d.subtasks || []).map(s => ({ text:s.text, done:!!s.done }));
   openModal(modalShell(id ? 'Editar tarea' : 'Nueva tarea', `
     <div class="field"><label>Nombre</label><input name="title" required value="${esc(d.title)}" placeholder="Ej: Enviar reporte semanal"></div>
     <div class="row2">
-      <div class="field"><label>Fecha</label><input type="date" name="date" value="${esc(d.date||today())}"></div>
-      <div class="field"><label>Hora inicio (opcional)</label><input type="time" name="time" value="${esc(d.time||'')}"></div>
+      <div class="field"><label>Fecha de inicio <span class="dim">(opcional)</span></label>
+        <input type="date" name="dateStart" value="${esc(d.dateStart||'')}"></div>
+      <div class="field"><label>Fecha de término</label>
+        <input type="date" name="date" value="${esc(d.date||today())}"></div>
     </div>
     <div class="row2">
-      <div class="field"><label>Hora término (opcional)</label><input type="time" name="timeEnd" value="${esc(d.timeEnd||'')}"></div>
+      <div class="field"><label>Hora <span class="dim">(opcional, para la alarma)</span></label>
+        <input type="time" name="time" value="${esc(d.time||'')}"></div>
     </div>
     <div class="row2">
       <div class="field"><label>Proyecto</label><select name="projectId">${projOptions(d.projectId)}</select></div>
@@ -1706,7 +1762,7 @@ function habitModal(id){
    "Enviar reporte mañana 9:30 !alta #RedBull" -> fecha, hora, prioridad y proyecto */
 function parseQuick(raw){
   let s = ' ' + String(raw).trim() + ' ';
-  const out = { title:'', date:today(), time:'', timeEnd:'', projectId:'', priority:'media' };
+  const out = { title:'', date:today(), time:'', projectId:'', priority:'media' };
   const t = new Date();
 
   const pm = s.match(/\s!(alta|media|baja|a|m|b)\b/i);
@@ -1728,7 +1784,6 @@ function parseQuick(raw){
   const rg = s.match(/\s(?:de\s+)?([01]?\d|2[0-3])(?::([0-5]\d))?\s*(?:-|–|a las|a)\s*([01]?\d|2[0-3])(?::([0-5]\d))?\b/i);
   if(rg){
     out.time = pad(Number(rg[1])) + ':' + (rg[2] || '00');
-    out.timeEnd = pad(Number(rg[3])) + ':' + (rg[4] || '00');
     s = s.replace(rg[0], ' ');
   }
   const hm = !out.time && s.match(/\s(?:a\s+las\s+)?([01]?\d|2[0-3]):([0-5]\d)\b/);
@@ -1771,7 +1826,7 @@ function quickAdd(raw){
   const p = parseQuick(raw);
   if(!p.title){ toast('Escribe un nombre para la tarea'); return; }
   const t = {
-    id:uid(), title:p.title, date:p.date, time:p.time, timeEnd:p.timeEnd,
+    id:uid(), title:p.title, date:p.date, time:p.time, dateStart:'',
     projectId: p.projectId || (ui.view === 'proyectos' && ui.project ? ui.project : ''),
     priority:p.priority, status:'pendiente', note:'', migrated:false, completedAt:'',
     createdAt:new Date().toISOString()
@@ -2407,7 +2462,7 @@ function crearDesdeEscaneo(){
     const p = parseQuick(l);
     if(!p.title) return;
     const t = touch({
-      id:uid(), title:p.title, date:p.date !== today() ? p.date : fecha, time:p.time, timeEnd:p.timeEnd,
+      id:uid(), title:p.title, date:p.date !== today() ? p.date : fecha, time:p.time, dateStart:'',
       projectId: p.projectId || proj, priority: p.priority !== 'media' ? p.priority : prio,
       status:'pendiente', note:'Desde una nota escaneada', migrated:false, completedAt:'',
       remind:0, subtasks:[], createdAt:new Date().toISOString()
@@ -2635,7 +2690,7 @@ function crearTareasDeNota(id){
   marcadas.forEach(txt => {
     const p = parseQuick(txt);
     const t = touch({
-      id:uid(), title:(p.title || txt).slice(0, 120), date:p.date, time:p.time, timeEnd:p.timeEnd, projectId:p.projectId,
+      id:uid(), title:(p.title || txt).slice(0, 120), date:p.date, time:p.time, dateStart:'', projectId:p.projectId,
       priority:p.priority, status:'pendiente', note:'Desde una reunión', migrated:false, completedAt:'',
       remind:0, subtasks:[], createdAt:new Date().toISOString()
     });
